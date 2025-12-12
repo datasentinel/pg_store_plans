@@ -1,0 +1,57 @@
+../pgsp_hash.o: ../pgsp_hash.c \
+ /soft/projects/postgres/build/include/server/postgres.h \
+ /soft/projects/postgres/build/include/server/c.h \
+ /soft/projects/postgres/build/include/server/postgres_ext.h \
+ /soft/projects/postgres/build/include/server/pg_config_ext.h \
+ /soft/projects/postgres/build/include/server/pg_config.h \
+ /soft/projects/postgres/build/include/server/pg_config_manual.h \
+ /soft/projects/postgres/build/include/server/pg_config_os.h \
+ /soft/projects/postgres/build/include/server/port.h \
+ /soft/projects/postgres/build/include/server/utils/elog.h \
+ /soft/projects/postgres/build/include/server/lib/stringinfo.h \
+ /soft/projects/postgres/build/include/server/utils/errcodes.h \
+ /soft/projects/postgres/build/include/server/utils/palloc.h \
+ /soft/projects/postgres/build/include/server/nodes/plannodes.h \
+ /soft/projects/postgres/build/include/server/access/sdir.h \
+ /soft/projects/postgres/build/include/server/access/stratnum.h \
+ /soft/projects/postgres/build/include/server/common/relpath.h \
+ /soft/projects/postgres/build/include/server/catalog/catversion.h \
+ /soft/projects/postgres/build/include/server/nodes/bitmapset.h \
+ /soft/projects/postgres/build/include/server/nodes/nodes.h \
+ /soft/projects/postgres/build/include/server/nodes/nodetags.h \
+ /soft/projects/postgres/build/include/server/nodes/lockoptions.h \
+ /soft/projects/postgres/build/include/server/nodes/primnodes.h \
+ /soft/projects/postgres/build/include/server/access/attnum.h \
+ /soft/projects/postgres/build/include/server/nodes/pg_list.h \
+ /soft/projects/postgres/build/include/server/utils/memutils.h \
+ /soft/projects/postgres/build/include/server/nodes/memnodes.h \
+ ../pgsp_hash.h \
+ /soft/projects/postgres/build/include/server/utils/hsearch.h
+/soft/projects/postgres/build/include/server/postgres.h:
+/soft/projects/postgres/build/include/server/c.h:
+/soft/projects/postgres/build/include/server/postgres_ext.h:
+/soft/projects/postgres/build/include/server/pg_config_ext.h:
+/soft/projects/postgres/build/include/server/pg_config.h:
+/soft/projects/postgres/build/include/server/pg_config_manual.h:
+/soft/projects/postgres/build/include/server/pg_config_os.h:
+/soft/projects/postgres/build/include/server/port.h:
+/soft/projects/postgres/build/include/server/utils/elog.h:
+/soft/projects/postgres/build/include/server/lib/stringinfo.h:
+/soft/projects/postgres/build/include/server/utils/errcodes.h:
+/soft/projects/postgres/build/include/server/utils/palloc.h:
+/soft/projects/postgres/build/include/server/nodes/plannodes.h:
+/soft/projects/postgres/build/include/server/access/sdir.h:
+/soft/projects/postgres/build/include/server/access/stratnum.h:
+/soft/projects/postgres/build/include/server/common/relpath.h:
+/soft/projects/postgres/build/include/server/catalog/catversion.h:
+/soft/projects/postgres/build/include/server/nodes/bitmapset.h:
+/soft/projects/postgres/build/include/server/nodes/nodes.h:
+/soft/projects/postgres/build/include/server/nodes/nodetags.h:
+/soft/projects/postgres/build/include/server/nodes/lockoptions.h:
+/soft/projects/postgres/build/include/server/nodes/primnodes.h:
+/soft/projects/postgres/build/include/server/access/attnum.h:
+/soft/projects/postgres/build/include/server/nodes/pg_list.h:
+/soft/projects/postgres/build/include/server/utils/memutils.h:
+/soft/projects/postgres/build/include/server/nodes/memnodes.h:
+../pgsp_hash.h:
+/soft/projects/postgres/build/include/server/utils/hsearch.h:

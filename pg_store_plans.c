@@ -47,6 +47,7 @@
 #include "funcapi.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+#include "optimizer/planner.h"
 #include "pgstat.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
@@ -65,6 +66,8 @@
 
 #include "pgsp_json.h"
 #include "pgsp_explain.h"
+#include "pgsp_hash.h"
+#include "pgsp_jumble.h"
 
 PG_MODULE_MAGIC;
 
@@ -126,7 +129,7 @@ typedef struct pgspHashKey
 	Oid			userid;			/* user OID */
 	Oid			dbid;			/* database OID */
 	queryid_t	queryid;		/* query identifier */
-	uint32		planid;			/* plan identifier */
+	uint64		planid;			/* plan identifier */
 } pgspHashKey;
 
 /*
@@ -218,6 +221,7 @@ static ExecutorRun_hook_type prev_ExecutorRun = NULL;
 static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 static ProcessUtility_hook_type prev_ProcessUtility = NULL;
+static planner_hook_type prev_planner_hook = NULL;
 
 /* Links to shared memory state */
 static pgspSharedState *shared_state = NULL;
@@ -373,8 +377,11 @@ static void pgsp_ProcessUtility(PlannedStmt *pstmt, const char *queryString,
 					ProcessUtilityContext context, ParamListInfo params,
 					QueryEnvironment *queryEnv,
 					DestReceiver *dest, COMPTAG_TYPE *completionTag);
+static PlannedStmt *pgsp_planner(Query *parse, const char *query_string,
+								 int cursorOptions, ParamListInfo boundParams);
 static uint32 hash_query(const char* query);
-static void pgsp_store(char *plan, queryid_t queryId,
+static void pgsp_store(QueryDesc *queryDesc, queryid_t queryId,
+			uint64 planId,
 		   double total_time, uint64 rows,
 		   const BufferUsage *bufusage);
 static void pg_store_plans_internal(FunctionCallInfo fcinfo,
@@ -585,6 +592,8 @@ _PG_init(void)
 	ExecutorEnd_hook = pgsp_ExecutorEnd;
 	prev_ProcessUtility = ProcessUtility_hook;
 	ProcessUtility_hook = pgsp_ProcessUtility;
+	prev_planner_hook = planner_hook;
+	planner_hook = pgsp_planner;
 }
 
 /*
@@ -600,6 +609,7 @@ _PG_fini(void)
 	ExecutorFinish_hook = prev_ExecutorFinish;
 	ExecutorEnd_hook = prev_ExecutorEnd;
 	ProcessUtility_hook = prev_ProcessUtility;
+	planner_hook = prev_planner_hook;
 }
 
 /*
@@ -956,6 +966,44 @@ error:
 	unlink(PGSP_DUMP_FILE ".tmp");
 }
 
+/*
+ * Build the JSON plan string from the QueryDesc.
+ */
+static char *
+pgsp_build_json_plan(QueryDesc *queryDesc)
+{
+    ExplainState *es;
+    StringInfo	  es_str;
+
+    es = NewExplainState();
+    es_str = es->str;
+
+    es->analyze = queryDesc->instrument_options;
+    es->verbose = log_verbose;
+    es->buffers = (es->analyze && log_buffers);
+    es->timing = (es->analyze && log_timing);
+    es->format = EXPLAIN_FORMAT_JSON;
+
+    ExplainBeginOutput(es);
+    ExplainPrintPlan(es, queryDesc);
+    if (log_triggers)
+        pgspExplainTriggers(es, queryDesc);
+    ExplainEndOutput(es);
+
+    /* Remove last line break */
+    if (es_str->len > 0 && es_str->data[es_str->len - 1] == '\n')
+        es_str->data[--es_str->len] = '\0';
+
+    /* JSON outmost braces. */
+    if (es_str->len > 0)
+    {
+        es_str->data[0] = '{';
+        es_str->data[es_str->len - 1] = '}';
+    }
+
+    return es_str->data;
+}
+
 
 /*
  * ExecutorStart hook: start up tracking if needed
@@ -1064,31 +1112,7 @@ pgsp_ExecutorEnd(QueryDesc *queryDesc)
 			(double)min_duration / 1000.0)
 		{
 			queryid_t	  queryid;
-			ExplainState *es;
-			StringInfo	  es_str;
-
-			es = NewExplainState();
-			es_str = es->str;
-
-			es->analyze = queryDesc->instrument_options;
-			es->verbose = log_verbose;
-			es->buffers = (es->analyze && log_buffers);
-			es->timing = (es->analyze && log_timing);
-			es->format = EXPLAIN_FORMAT_JSON;
-
-			ExplainBeginOutput(es);
-			ExplainPrintPlan(es, queryDesc);
-			if (log_triggers)
-				pgspExplainTriggers(es, queryDesc);
-			ExplainEndOutput(es);
-
-			/* Remove last line break */
-			if (es_str->len > 0 && es_str->data[es_str->len - 1] == '\n')
-				es_str->data[--es_str->len] = '\0';
-
-			/* JSON outmost braces. */
-			es_str->data[0] = '{';
-			es_str->data[es_str->len - 1] = '}';
+			uint64 planId;
 
 			queryid = queryDesc->plannedstmt->queryId;
 #if PG_VERSION_NUM < 140000
@@ -1106,12 +1130,18 @@ pgsp_ExecutorEnd(QueryDesc *queryDesc)
 			Assert(queryid != PGSP_NO_QUERYID);
 #endif
 
-			pgsp_store(es_str->data,
+			planId = pgsp_get_cached_plan_id(queryid);
+
+			if (planId != 0) {
+				    pgsp_remove_plan_id(queryid);
+			}
+
+			pgsp_store(queryDesc,
 						queryid,
+						planId,
 						queryDesc->totaltime->total * 1000.0,	/* convert to msec */
 						queryDesc->estate->es_processed,
 						&queryDesc->totaltime->bufusage);
-			pfree(es_str->data);
 		}
 	}
 
@@ -1176,6 +1206,65 @@ pgsp_ProcessUtility(PlannedStmt *pstmt, const char *queryString,
 }
 
 /*
+ * Planner hook:
+ */
+static PlannedStmt *
+pgsp_planner(Query *parse, const char *query_string, int cursorOptions,
+			 ParamListInfo boundParams)
+{
+	PlannedStmt *result;
+	ListCell *lc;
+
+	if (prev_planner_hook)
+		result = prev_planner_hook(parse, query_string, cursorOptions, boundParams);
+	else
+		result = standard_planner(parse, query_string, cursorOptions, boundParams);
+
+	/* Compute planId for the plan if tracking is enabled */
+	// if (!pgsp_enabled(result->queryId))
+	// 	elog(DEBUG3, "pg_store_plans: plan tracking is disabled for queryid %lu",
+	// 		 (unsigned long)result->queryId);
+	// if (result->planTree == NULL)
+	// 	elog(DEBUG3, "pg_store_plans: planTree is NULL for queryid %lu",
+	// 		 (unsigned long)result->queryId);
+	if (pgsp_enabled(result->queryId) && result->planTree != NULL)
+	{
+		JumbleState *jstate = pgsp_init_jumble_state();
+		if (jstate == NULL)
+            return result; 
+		
+		/* Jumble the plan tree to compute planId */
+		pgsp_jumble_plan_tree(jstate, result->planTree);
+		foreach(lc, result->subplans)
+		{
+			Plan	   *subplan = (Plan *) lfirst(lc);
+			pgsp_jumble_plan_tree(jstate, subplan);
+		}
+		pgsp_jumble_range_table(jstate, result->rtable);	
+
+		// char *plan_string = nodeToString(result->planTree);
+		// elog(DEBUG3, "pg_store_plans: Plan Tree: %s", plan_string);
+		// pfree(plan_string);
+		
+		if (jstate->jumble_len > 0)
+		{
+			uint64 planId;
+			planId = DatumGetUInt64(hash_any_extended(jstate->jumble,
+                                                      jstate->jumble_len,
+                                                      0));
+   			pgsp_cache_plan_id(result->queryId, planId);
+
+		}
+		
+		pfree(jstate->jumble);
+		pfree(jstate->clocations);
+		pfree(jstate);
+	}
+
+	return result;
+}
+
+/*
  * hash_query: calculate internal query ID for a query
  *
  *  As of PG11, Query.queryId has been widen to 64 bit to reduce collision of
@@ -1213,7 +1302,7 @@ hash_query(const char* query)
  * value of the given plan, which is calculated in ths function.
  */
 static void
-pgsp_store(char *plan, queryid_t queryId,
+pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 		   double total_time, uint64 rows,
 		   const BufferUsage *bufusage)
 {
@@ -1221,13 +1310,12 @@ pgsp_store(char *plan, queryid_t queryId,
 	pgspEntry  *entry;
 	char	   *norm_query = NULL;
 	int 		plan_len;
-	char	   *normalized_plan = NULL;
 	char	   *shorten_plan = NULL;
 	volatile pgspEntry *e;
 	Size		plan_offset = 0;
 	bool		do_gc = false;
+	char		 *json_plan; 
 
-	Assert(plan != NULL && queryId != PGSP_NO_QUERYID);
 
 	/* Safety check... */
 	if (!shared_state || !hash_table)
@@ -1237,69 +1325,69 @@ pgsp_store(char *plan, queryid_t queryId,
 	key.userid = GetUserId();
 	key.dbid = MyDatabaseId;
 	key.queryid = queryId;
-
-	normalized_plan = pgsp_json_normalize(plan);
-	shorten_plan = pgsp_json_shorten(plan);
-	elog(DEBUG3, "pg_store_plans: Normalized plan: %s", normalized_plan);
-	elog(DEBUG3, "pg_store_plans: Shorten plan: %s", shorten_plan);
-	elog(DEBUG3, "pg_store_plans: Original plan: %s", plan);
-	plan_len = strlen(shorten_plan);
-
-	key.planid = hash_any((const unsigned char *)normalized_plan,
-						  strlen(normalized_plan));
-	pfree(normalized_plan);
-
-	if (plan_len >= shared_state->plan_size)
-		plan_len = pg_encoding_mbcliplen(GetDatabaseEncoding(),
-										 shorten_plan,
-										 plan_len,
-										 shared_state->plan_size - 1);
-
+	key.planid = planId;
 
 	/* Look up the hash table entry with shared lock. */
 	LWLockAcquire(shared_state->lock, LW_SHARED);
 
 	entry = (pgspEntry *) hash_search(hash_table, &key, HASH_FIND, NULL);
 
-	/* Store the plan text, if the entry not present */
-	if (!entry && plan_storage == PLAN_STORAGE_FILE)
-	{
-		int		gc_count;
-		bool	stored;
-
-		/* Append new plan text to file with only shared lock held */
-		stored = ptext_store(shorten_plan, plan_len, &plan_offset, &gc_count);
-
-		/*
-		 * Determine whether we need to garbage collect external query texts
-		 * while the shared lock is still held.  This micro-optimization
-		 * avoids taking the time to decide this while holding exclusive lock.
-		 */
-		do_gc = need_gc_ptexts();
-
-		/* Acquire exclusive lock as required by entry_alloc() */
-		LWLockRelease(shared_state->lock);
-		LWLockAcquire(shared_state->lock, LW_EXCLUSIVE);
-
-		/*
-		 * A garbage collection may have occurred while we weren't holding the
-		 * lock.  In the unlikely event that this happens, the plan text we
-		 * stored above will have been garbage collected, so write it again.
-		 * This should be infrequent enough that doing it while holding
-		 * exclusive lock isn't a performance problem.
-		 */
-		if (!stored || shared_state->gc_count != gc_count)
-			stored = ptext_store(shorten_plan, plan_len, &plan_offset, NULL);
-
-		/* If we failed to write to the text file, give up */
-		if (!stored)
-			goto done;
-
-	}
-
-	/* Create new entry, if not present */
 	if (!entry)
 	{
+		json_plan = pgsp_build_json_plan(queryDesc);
+
+		Assert(json_plan != NULL && queryId != PGSP_NO_QUERYID);
+
+		shorten_plan = pgsp_json_shorten(json_plan);
+		plan_len = strlen(shorten_plan);
+
+		// elog(DEBUG3, "pg_store_plans: Shorten plan: %s", shorten_plan);
+		// elog(DEBUG3, "pg_store_plans: Original plan: %s", json_plan);
+
+		pfree(json_plan);
+
+		if (plan_len >= shared_state->plan_size)
+			plan_len = pg_encoding_mbcliplen(GetDatabaseEncoding(),
+											shorten_plan,
+											plan_len,
+											shared_state->plan_size - 1);
+
+  		/* Store the plan text, if the entry not present */
+		if (plan_storage == PLAN_STORAGE_FILE)
+		{
+			int		gc_count;
+			bool	stored;
+
+			/* Append new plan text to file with only shared lock held */
+			stored = ptext_store(shorten_plan, plan_len, &plan_offset, &gc_count);
+
+			/*
+			* Determine whether we need to garbage collect external query texts
+			* while the shared lock is still held.  This micro-optimization
+			* avoids taking the time to decide this while holding exclusive lock.
+			*/
+			do_gc = need_gc_ptexts();
+
+			/* Acquire exclusive lock as required by entry_alloc() */
+			LWLockRelease(shared_state->lock);
+			LWLockAcquire(shared_state->lock, LW_EXCLUSIVE);
+
+			/*
+			* A garbage collection may have occurred while we weren't holding the
+			* lock.  In the unlikely event that this happens, the plan text we
+			* stored above will have been garbage collected, so write it again.
+			* This should be infrequent enough that doing it while holding
+			* exclusive lock isn't a performance problem.
+			*/
+			if (!stored || shared_state->gc_count != gc_count)
+				stored = ptext_store(shorten_plan, plan_len, &plan_offset, NULL);
+
+			/* If we failed to write to the text file, give up */
+			if (!stored)
+				goto done;
+
+		}
+
 		entry = entry_alloc(&key, plan_offset, plan_len, false);
 
 		/* shorten_plan is terminated by NUL */

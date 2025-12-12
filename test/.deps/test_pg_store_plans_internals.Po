@@ -1,0 +1,238 @@
+test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
+ /soft/projects/postgres/build/include/server/postgres.h \
+ /soft/projects/postgres/build/include/server/c.h \
+ /soft/projects/postgres/build/include/server/postgres_ext.h \
+ /soft/projects/postgres/build/include/server/pg_config_ext.h \
+ /soft/projects/postgres/build/include/server/pg_config.h \
+ /soft/projects/postgres/build/include/server/pg_config_manual.h \
+ /soft/projects/postgres/build/include/server/pg_config_os.h \
+ /soft/projects/postgres/build/include/server/port.h \
+ /soft/projects/postgres/build/include/server/utils/elog.h \
+ /soft/projects/postgres/build/include/server/lib/stringinfo.h \
+ /soft/projects/postgres/build/include/server/utils/errcodes.h \
+ /soft/projects/postgres/build/include/server/utils/palloc.h \
+ /soft/projects/postgres/build/include/server/optimizer/planner.h \
+ /soft/projects/postgres/build/include/server/nodes/pathnodes.h \
+ /soft/projects/postgres/build/include/server/access/sdir.h \
+ /soft/projects/postgres/build/include/server/nodes/params.h \
+ /soft/projects/postgres/build/include/server/nodes/parsenodes.h \
+ /soft/projects/postgres/build/include/server/common/relpath.h \
+ /soft/projects/postgres/build/include/server/catalog/catversion.h \
+ /soft/projects/postgres/build/include/server/nodes/bitmapset.h \
+ /soft/projects/postgres/build/include/server/nodes/nodes.h \
+ /soft/projects/postgres/build/include/server/nodes/nodetags.h \
+ /soft/projects/postgres/build/include/server/nodes/lockoptions.h \
+ /soft/projects/postgres/build/include/server/nodes/primnodes.h \
+ /soft/projects/postgres/build/include/server/access/attnum.h \
+ /soft/projects/postgres/build/include/server/nodes/pg_list.h \
+ /soft/projects/postgres/build/include/server/nodes/value.h \
+ /soft/projects/postgres/build/include/server/partitioning/partdefs.h \
+ /soft/projects/postgres/build/include/server/storage/block.h \
+ /soft/projects/postgres/build/include/server/nodes/plannodes.h \
+ /soft/projects/postgres/build/include/server/access/stratnum.h \
+ /soft/projects/postgres/build/include/server/commands/explain.h \
+ /soft/projects/postgres/build/include/server/executor/executor.h \
+ /soft/projects/postgres/build/include/server/executor/execdesc.h \
+ /soft/projects/postgres/build/include/server/nodes/execnodes.h \
+ /soft/projects/postgres/build/include/server/access/tupconvert.h \
+ /soft/projects/postgres/build/include/server/access/attmap.h \
+ /soft/projects/postgres/build/include/server/access/tupdesc.h \
+ /soft/projects/postgres/build/include/server/catalog/pg_attribute.h \
+ /soft/projects/postgres/build/include/server/catalog/genbki.h \
+ /soft/projects/postgres/build/include/server/catalog/pg_attribute_d.h \
+ /soft/projects/postgres/build/include/server/access/htup.h \
+ /soft/projects/postgres/build/include/server/storage/itemptr.h \
+ /soft/projects/postgres/build/include/server/storage/off.h \
+ /soft/projects/postgres/build/include/server/storage/itemid.h \
+ /soft/projects/postgres/build/include/server/executor/tuptable.h \
+ /soft/projects/postgres/build/include/server/access/htup_details.h \
+ /soft/projects/postgres/build/include/server/access/transam.h \
+ /soft/projects/postgres/build/include/server/access/xlogdefs.h \
+ /soft/projects/postgres/build/include/server/access/tupmacs.h \
+ /soft/projects/postgres/build/include/server/catalog/pg_type_d.h \
+ /soft/projects/postgres/build/include/server/storage/bufpage.h \
+ /soft/projects/postgres/build/include/server/storage/item.h \
+ /soft/projects/postgres/build/include/server/varatt.h \
+ /soft/projects/postgres/build/include/server/access/sysattr.h \
+ /soft/projects/postgres/build/include/server/storage/buf.h \
+ /soft/projects/postgres/build/include/server/executor/instrument.h \
+ /soft/projects/postgres/build/include/server/portability/instr_time.h \
+ /soft/projects/postgres/build/include/server/fmgr.h \
+ /soft/projects/postgres/build/include/server/lib/ilist.h \
+ /soft/projects/postgres/build/include/server/lib/pairingheap.h \
+ /soft/projects/postgres/build/include/server/nodes/miscnodes.h \
+ /soft/projects/postgres/build/include/server/nodes/tidbitmap.h \
+ /soft/projects/postgres/build/include/server/utils/dsa.h \
+ /soft/projects/postgres/build/include/server/port/atomics.h \
+ /soft/projects/postgres/build/include/server/port/atomics/arch-x86.h \
+ /soft/projects/postgres/build/include/server/port/atomics/generic-gcc.h \
+ /soft/projects/postgres/build/include/server/port/atomics/fallback.h \
+ /soft/projects/postgres/build/include/server/port/atomics/generic.h \
+ /soft/projects/postgres/build/include/server/storage/dsm.h \
+ /soft/projects/postgres/build/include/server/storage/dsm_impl.h \
+ /soft/projects/postgres/build/include/server/storage/condition_variable.h \
+ /soft/projects/postgres/build/include/server/storage/proclist_types.h \
+ /soft/projects/postgres/build/include/server/storage/procnumber.h \
+ /soft/projects/postgres/build/include/server/storage/spin.h \
+ /soft/projects/postgres/build/include/server/storage/s_lock.h \
+ /soft/projects/postgres/build/include/server/utils/hsearch.h \
+ /soft/projects/postgres/build/include/server/utils/queryenvironment.h \
+ /soft/projects/postgres/build/include/server/utils/reltrigger.h \
+ /soft/projects/postgres/build/include/server/utils/sharedtuplestore.h \
+ /soft/projects/postgres/build/include/server/storage/fd.h \
+ /soft/projects/postgres/build/include/server/port/pg_iovec.h \
+ /soft/projects/postgres/build/include/server/storage/sharedfileset.h \
+ /soft/projects/postgres/build/include/server/storage/fileset.h \
+ /soft/projects/postgres/build/include/server/utils/snapshot.h \
+ /soft/projects/postgres/build/include/server/datatype/timestamp.h \
+ /soft/projects/postgres/build/include/server/utils/sortsupport.h \
+ /soft/projects/postgres/build/include/server/utils/relcache.h \
+ /soft/projects/postgres/build/include/server/utils/tuplesort.h \
+ /soft/projects/postgres/build/include/server/access/brin_tuple.h \
+ /soft/projects/postgres/build/include/server/access/brin_internal.h \
+ /soft/projects/postgres/build/include/server/access/amapi.h \
+ /soft/projects/postgres/build/include/server/access/genam.h \
+ /soft/projects/postgres/build/include/server/access/skey.h \
+ /soft/projects/postgres/build/include/server/storage/lockdefs.h \
+ /soft/projects/postgres/build/include/server/utils/typcache.h \
+ /soft/projects/postgres/build/include/server/access/itup.h \
+ /soft/projects/postgres/build/include/server/utils/logtape.h \
+ /soft/projects/postgres/build/include/server/utils/tuplestore.h \
+ /soft/projects/postgres/build/include/server/lib/simplehash.h \
+ /soft/projects/postgres/build/include/server/port/pg_bitutils.h \
+ /soft/projects/postgres/build/include/server/tcop/dest.h \
+ /soft/projects/postgres/build/include/server/tcop/cmdtag.h \
+ /soft/projects/postgres/build/include/server/tcop/cmdtaglist.h \
+ /soft/projects/postgres/build/include/server/utils/memutils.h \
+ /soft/projects/postgres/build/include/server/nodes/memnodes.h \
+ /soft/projects/postgres/build/include/server/parser/parse_node.h \
+ /soft/projects/postgres/build/include/server/nodes/queryjumble.h \
+ /soft/projects/postgres/build/include/server/utils/builtins.h \
+ /soft/projects/postgres/build/include/server/utils/fmgrprotos.h \
+ /soft/projects/postgres/build/include/server/access/hash.h \
+ /soft/projects/postgres/build/include/server/catalog/pg_am_d.h \
+ /soft/projects/postgres/build/include/server/common/hashfn.h \
+ /soft/projects/postgres/build/include/server/storage/bufmgr.h \
+ /soft/projects/postgres/build/include/server/storage/relfilelocator.h \
+ /soft/projects/postgres/build/include/server/utils/snapmgr.h \
+ /soft/projects/postgres/build/include/server/utils/resowner.h \
+ ../pgsp_jumble.h ../pgsp_hash.h
+/soft/projects/postgres/build/include/server/postgres.h:
+/soft/projects/postgres/build/include/server/c.h:
+/soft/projects/postgres/build/include/server/postgres_ext.h:
+/soft/projects/postgres/build/include/server/pg_config_ext.h:
+/soft/projects/postgres/build/include/server/pg_config.h:
+/soft/projects/postgres/build/include/server/pg_config_manual.h:
+/soft/projects/postgres/build/include/server/pg_config_os.h:
+/soft/projects/postgres/build/include/server/port.h:
+/soft/projects/postgres/build/include/server/utils/elog.h:
+/soft/projects/postgres/build/include/server/lib/stringinfo.h:
+/soft/projects/postgres/build/include/server/utils/errcodes.h:
+/soft/projects/postgres/build/include/server/utils/palloc.h:
+/soft/projects/postgres/build/include/server/optimizer/planner.h:
+/soft/projects/postgres/build/include/server/nodes/pathnodes.h:
+/soft/projects/postgres/build/include/server/access/sdir.h:
+/soft/projects/postgres/build/include/server/nodes/params.h:
+/soft/projects/postgres/build/include/server/nodes/parsenodes.h:
+/soft/projects/postgres/build/include/server/common/relpath.h:
+/soft/projects/postgres/build/include/server/catalog/catversion.h:
+/soft/projects/postgres/build/include/server/nodes/bitmapset.h:
+/soft/projects/postgres/build/include/server/nodes/nodes.h:
+/soft/projects/postgres/build/include/server/nodes/nodetags.h:
+/soft/projects/postgres/build/include/server/nodes/lockoptions.h:
+/soft/projects/postgres/build/include/server/nodes/primnodes.h:
+/soft/projects/postgres/build/include/server/access/attnum.h:
+/soft/projects/postgres/build/include/server/nodes/pg_list.h:
+/soft/projects/postgres/build/include/server/nodes/value.h:
+/soft/projects/postgres/build/include/server/partitioning/partdefs.h:
+/soft/projects/postgres/build/include/server/storage/block.h:
+/soft/projects/postgres/build/include/server/nodes/plannodes.h:
+/soft/projects/postgres/build/include/server/access/stratnum.h:
+/soft/projects/postgres/build/include/server/commands/explain.h:
+/soft/projects/postgres/build/include/server/executor/executor.h:
+/soft/projects/postgres/build/include/server/executor/execdesc.h:
+/soft/projects/postgres/build/include/server/nodes/execnodes.h:
+/soft/projects/postgres/build/include/server/access/tupconvert.h:
+/soft/projects/postgres/build/include/server/access/attmap.h:
+/soft/projects/postgres/build/include/server/access/tupdesc.h:
+/soft/projects/postgres/build/include/server/catalog/pg_attribute.h:
+/soft/projects/postgres/build/include/server/catalog/genbki.h:
+/soft/projects/postgres/build/include/server/catalog/pg_attribute_d.h:
+/soft/projects/postgres/build/include/server/access/htup.h:
+/soft/projects/postgres/build/include/server/storage/itemptr.h:
+/soft/projects/postgres/build/include/server/storage/off.h:
+/soft/projects/postgres/build/include/server/storage/itemid.h:
+/soft/projects/postgres/build/include/server/executor/tuptable.h:
+/soft/projects/postgres/build/include/server/access/htup_details.h:
+/soft/projects/postgres/build/include/server/access/transam.h:
+/soft/projects/postgres/build/include/server/access/xlogdefs.h:
+/soft/projects/postgres/build/include/server/access/tupmacs.h:
+/soft/projects/postgres/build/include/server/catalog/pg_type_d.h:
+/soft/projects/postgres/build/include/server/storage/bufpage.h:
+/soft/projects/postgres/build/include/server/storage/item.h:
+/soft/projects/postgres/build/include/server/varatt.h:
+/soft/projects/postgres/build/include/server/access/sysattr.h:
+/soft/projects/postgres/build/include/server/storage/buf.h:
+/soft/projects/postgres/build/include/server/executor/instrument.h:
+/soft/projects/postgres/build/include/server/portability/instr_time.h:
+/soft/projects/postgres/build/include/server/fmgr.h:
+/soft/projects/postgres/build/include/server/lib/ilist.h:
+/soft/projects/postgres/build/include/server/lib/pairingheap.h:
+/soft/projects/postgres/build/include/server/nodes/miscnodes.h:
+/soft/projects/postgres/build/include/server/nodes/tidbitmap.h:
+/soft/projects/postgres/build/include/server/utils/dsa.h:
+/soft/projects/postgres/build/include/server/port/atomics.h:
+/soft/projects/postgres/build/include/server/port/atomics/arch-x86.h:
+/soft/projects/postgres/build/include/server/port/atomics/generic-gcc.h:
+/soft/projects/postgres/build/include/server/port/atomics/fallback.h:
+/soft/projects/postgres/build/include/server/port/atomics/generic.h:
+/soft/projects/postgres/build/include/server/storage/dsm.h:
+/soft/projects/postgres/build/include/server/storage/dsm_impl.h:
+/soft/projects/postgres/build/include/server/storage/condition_variable.h:
+/soft/projects/postgres/build/include/server/storage/proclist_types.h:
+/soft/projects/postgres/build/include/server/storage/procnumber.h:
+/soft/projects/postgres/build/include/server/storage/spin.h:
+/soft/projects/postgres/build/include/server/storage/s_lock.h:
+/soft/projects/postgres/build/include/server/utils/hsearch.h:
+/soft/projects/postgres/build/include/server/utils/queryenvironment.h:
+/soft/projects/postgres/build/include/server/utils/reltrigger.h:
+/soft/projects/postgres/build/include/server/utils/sharedtuplestore.h:
+/soft/projects/postgres/build/include/server/storage/fd.h:
+/soft/projects/postgres/build/include/server/port/pg_iovec.h:
+/soft/projects/postgres/build/include/server/storage/sharedfileset.h:
+/soft/projects/postgres/build/include/server/storage/fileset.h:
+/soft/projects/postgres/build/include/server/utils/snapshot.h:
+/soft/projects/postgres/build/include/server/datatype/timestamp.h:
+/soft/projects/postgres/build/include/server/utils/sortsupport.h:
+/soft/projects/postgres/build/include/server/utils/relcache.h:
+/soft/projects/postgres/build/include/server/utils/tuplesort.h:
+/soft/projects/postgres/build/include/server/access/brin_tuple.h:
+/soft/projects/postgres/build/include/server/access/brin_internal.h:
+/soft/projects/postgres/build/include/server/access/amapi.h:
+/soft/projects/postgres/build/include/server/access/genam.h:
+/soft/projects/postgres/build/include/server/access/skey.h:
+/soft/projects/postgres/build/include/server/storage/lockdefs.h:
+/soft/projects/postgres/build/include/server/utils/typcache.h:
+/soft/projects/postgres/build/include/server/access/itup.h:
+/soft/projects/postgres/build/include/server/utils/logtape.h:
+/soft/projects/postgres/build/include/server/utils/tuplestore.h:
+/soft/projects/postgres/build/include/server/lib/simplehash.h:
+/soft/projects/postgres/build/include/server/port/pg_bitutils.h:
+/soft/projects/postgres/build/include/server/tcop/dest.h:
+/soft/projects/postgres/build/include/server/tcop/cmdtag.h:
+/soft/projects/postgres/build/include/server/tcop/cmdtaglist.h:
+/soft/projects/postgres/build/include/server/utils/memutils.h:
+/soft/projects/postgres/build/include/server/nodes/memnodes.h:
+/soft/projects/postgres/build/include/server/parser/parse_node.h:
+/soft/projects/postgres/build/include/server/nodes/queryjumble.h:
+/soft/projects/postgres/build/include/server/utils/builtins.h:
+/soft/projects/postgres/build/include/server/utils/fmgrprotos.h:
+/soft/projects/postgres/build/include/server/access/hash.h:
+/soft/projects/postgres/build/include/server/catalog/pg_am_d.h:
+/soft/projects/postgres/build/include/server/common/hashfn.h:
+/soft/projects/postgres/build/include/server/storage/bufmgr.h:
+/soft/projects/postgres/build/include/server/storage/relfilelocator.h:
+/soft/projects/postgres/build/include/server/utils/snapmgr.h:
+/soft/projects/postgres/build/include/server/utils/resowner.h:
+../pgsp_jumble.h:
+../pgsp_hash.h:

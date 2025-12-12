@@ -1,0 +1,78 @@
+SET client_min_messages = WARNING;
+-- Load the parent extension first
+CREATE EXTENSION pg_store_plans;
+-- Load test extension
+CREATE EXTENSION test_pg_store_plans_internals;
+-- Run hash table tests
+SELECT test_hash_operations();
+                                     test_hash_operations                                     
+----------------------------------------------------------------------------------------------
+ Test 1: Init - PASS                                                                         +
+ Test 2: Hash entries - PASS (entries: 1014)                                                 +
+ Test 3: Retrieve and remove plans- PASS (retrieved: 1014, not retrieved: 8986, total: 10000)+
+ Test 4: Empty hash table - PASS (entries: 0)                                                +
+ Test 5: Reinitialize hash table - PASS (entries: 0)                                         +
+                                                                                             +
+ All tests PASSED                                                                            +
+ 
+(1 row)
+
+-- Run jumble tests
+SELECT test_jumble_operations();
+                     test_jumble_operations                      
+-----------------------------------------------------------------
+ Test: Deterministic hashing - PASS (hash: 14776145195350300486)+
+ 
+(1 row)
+
+-- Run jumble plan tree test
+SELECT test_jumble_plan_tree();
+                    test_jumble_plan_tree                    
+-------------------------------------------------------------
+ Test: ModifyTable with different operations - PASS         +
+ Test: ModifyTable with different result relations - PASS   +
+ Test: Left tree - PASS                                     +
+ Test: Right tree - PASS                                    +
+ Test: Different index IDs scans- PASS                      +
+ Test: same index IDs scans with different directions - PASS+
+ Test: nested loop join types - PASS                        +
+ Test: Different foreign scan relids - PASS                 +
+ Test: Different custom scan relids - PASS                  +
+ Test: Gather with different num_workers - PASS             +
+ Test: Gather with different single_copy flag - PASS        +
+ Test: GatherMerge with different num_workers - PASS        +
+ Test: GatherMerge with different numCols - PASS            +
+ Test: IndexOnlyScan with different index IDs - PASS        +
+ Test: IndexOnlyScan with different scan directions - PASS  +
+ Test: BitmapIndexScan with different index IDs - PASS      +
+ Test: BitmapIndexScan with different scanrelid - PASS      +
+ Test: Sort with different numCols - PASS                   +
+ Test: Sort with different sort operator - PASS             +
+ Test: Sort with different nullsFirst - PASS                +
+ Test: IncrementalSort with different nPresortedCols - PASS +
+ Test: IncrementalSort with different numCols - PASS        +
+ Test: IncrementalSort with different sort operators - PASS +
+ Test: Group with different numCols - PASS                  +
+ Test: Group with different column indices - PASS           +
+ Test: Group with different column order - PASS             +
+ Test: Agg with different aggstrategy - PASS                +
+ Test: Agg with different aggsplit - PASS                   +
+ Test: Agg with different numCols - PASS                    +
+ Test: Agg with different grpColIdx - PASS                  +
+ Test: WindowAgg with different winref - PASS               +
+ Test: WindowAgg with same winref - PASS                    +
+ Test: SetOp with different commands - PASS                 +
+ Test: SetOp with different strategy - PASS                 +
+ Test: SetOp with different numCols - PASS                  +
+ Test: Different seq scan relids - PASS                     +
+ Test: Append with different number of children - PASS      +
+ Test: Append with same children but different order - PASS +
+ Test: nodes added - PASS                                   +
+                                                            +
+ All tests PASSED                                           +
+ 
+(1 row)
+
+-- Cleanup
+DROP EXTENSION test_pg_store_plans_internals;
+DROP EXTENSION pg_store_plans;

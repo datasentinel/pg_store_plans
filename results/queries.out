@@ -362,116 +362,46 @@ select pg_store_plans_reset();
  
 
 \o /dev/null
-WITH min_customer AS (
-     -- Find and return the customer with the minimum customer_id
-     SELECT MIN(customer_id) AS customer_id
-     FROM customers
-)
-DELETE FROM payments
-WHERE order_id IN (
-    SELECT order_id
-    FROM orders
-    WHERE order_date > current_date - 10 and customer_id = (SELECT customer_id FROM min_customer)
-);
-WITH min_customer AS (
-     -- Find and return the customer with the minimum customer_id
-     SELECT MIN(customer_id) AS customer_id
-     FROM customers
-)
-DELETE FROM payments
-WHERE order_id IN (
-    SELECT order_id
-    FROM orders
-    WHERE order_date > current_date - 20 and customer_id = (SELECT customer_id FROM min_customer)
-);
+SELECT * FROM orders WHERE order_date = CURRENT_DATE -1;
+SELECT * FROM orders WHERE order_date = CURRENT_DATE -2;
+SELECT * FROM orders WHERE order_date = CURRENT_DATE -1 or order_date = current_date - 2;
 \o
 select calls, plan from pg_store_plans order by calls, plan;
+     1 | Append  (cost=8.43..403.88 rows=294 width=32)                                                 +
+       |   Subplans Removed: 19                                                                        +
+       |   ->  Bitmap Heap Scan on orders_p2 orders_1  (cost=8.43..19.16 rows=14 width=32)             +
+       |         Recheck Cond: ((order_date = (CURRENT_DATE - 1)) OR (order_date = (CURRENT_DATE - 2)))+
+       |         ->  BitmapOr  (cost=8.43..8.43 rows=14 width=0)                                       +
+       |               ->  Bitmap Index Scan using orders_p2_pkey  (cost=0.00..4.21 rows=7 width=0)    +
+       |                     Index Cond: (order_date = (CURRENT_DATE - 1))                             +
+       |               ->  Bitmap Index Scan using orders_p2_pkey  (cost=0.00..4.21 rows=7 width=0)    +
+       |                     Index Cond: (order_date = (CURRENT_DATE - 2))                             +
+       |   ->  Bitmap Heap Scan on orders_p1 orders_2  (cost=8.43..19.16 rows=14 width=32)             +
+       |         Recheck Cond: ((order_date = (CURRENT_DATE - 1)) OR (order_date = (CURRENT_DATE - 2)))+
+       |         ->  BitmapOr  (cost=8.43..8.43 rows=14 width=0)                                       +
+       |               ->  Bitmap Index Scan using orders_p1_pkey  (cost=0.00..4.21 rows=7 width=0)    +
+       |                     Index Cond: (order_date = (CURRENT_DATE - 1))                             +
+       |               ->  Bitmap Index Scan using orders_p1_pkey  (cost=0.00..4.21 rows=7 width=0)    +
+       |                     Index Cond: (order_date = (CURRENT_DATE - 2))
      1 | Result  (cost=0.00..0.01 rows=1 width=4)
-     2 | Delete on payments  (cost=862.31..885.06 rows=0 width=0)                                                     +
-       |   InitPlan 1                                                                                                 +
-       |     ->  Aggregate  (cost=16.69..16.70 rows=1 width=4)                                                        +
-       |         ->  Seq Scan on customers  (cost=0.00..16.35 rows=135 width=4)                                       +
-       |   ->  Merge Semi Join  (cost=845.61..868.36 rows=667 width=16)                                               +
-       |         Merge Cond: (payments.order_id = orders.order_id)                                                    +
-       |         ->  Sort  (cost=285.34..293.28 rows=3174 width=10)                                                   +
-       |               Sort Key: payments.order_id                                                                    +
-       |               ->  Seq Scan on payments  (cost=0.00..100.74 rows=3174 width=10)                               +
-       |         ->  Sort  (cost=560.27..560.37 rows=42 width=14)                                                     +
-       |               Sort Key: orders.order_id                                                                      +
-       |               ->  Append  (cost=7.56..559.14 rows=42 width=14)                                               +
-       |                     Subplans Removed: 9                                                                      +
-       |                     ->  Bitmap Heap Scan on orders_p10 orders_1  (cost=7.56..26.62 rows=2 width=14)          +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p10_pkey  (cost=0.00..7.55 rows=453 width=0)    +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p9 orders_2  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p9_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p8 orders_3  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p8_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p7 orders_4  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p7_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p6 orders_5  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p6_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p5 orders_6  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p5_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p4 orders_7  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p4_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p3 orders_8  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p3_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p2 orders_9  (cost=7.56..26.62 rows=2 width=14)           +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p2_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p1 orders_10  (cost=7.56..26.62 rows=2 width=14)          +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p1_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_p0 orders_11  (cost=7.56..26.62 rows=2 width=14)          +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_p0_pkey  (cost=0.00..7.55 rows=453 width=0)     +
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))                               +
-       |                     ->  Bitmap Heap Scan on orders_default orders_12  (cost=7.56..26.62 rows=2 width=14)     +
-       |                           Recheck Cond: (order_date > (CURRENT_DATE - 10))                                   +
-       |                           Filter: (customer_id = (InitPlan 1).col1)                                          +
-       |                           ->  Bitmap Index Scan using orders_default_pkey  (cost=0.00..7.55 rows=453 width=0)+
-       |                                 Index Cond: (order_date > (CURRENT_DATE - 10))
+     2 | Append  (cost=4.21..302.96 rows=147 width=32)                                                 +
+       |   Subplans Removed: 20                                                                        +
+       |   ->  Bitmap Heap Scan on orders_p1 orders_1  (cost=4.21..14.39 rows=7 width=32)              +
+       |         Recheck Cond: (order_date = (CURRENT_DATE - 1))                                       +
+       |         ->  Bitmap Index Scan using orders_p1_pkey  (cost=0.00..4.21 rows=7 width=0)          +
+       |               Index Cond: (order_date = (CURRENT_DATE - 1))
 
 select pg_store_plans_reset();
  
 
 \o /dev/null
-drop TABLE addresses;
-drop TABLE payments;
-drop TABLE order_details;
-drop TABLE orders;
-drop TABLE employees;
-drop TABLE branches;
-drop TABLE products;
-drop TABLE customers;
-drop TABLE countries;
-drop TABLE regions;
+-- drop TABLE addresses;
+-- drop TABLE payments;
+-- drop TABLE order_details;
+-- drop TABLE orders;
+-- drop TABLE employees;
+-- drop TABLE branches;
+-- drop TABLE products;
+-- drop TABLE customers;
+-- drop TABLE countries;
+-- drop TABLE regions;

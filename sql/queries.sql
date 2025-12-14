@@ -294,42 +294,24 @@ select calls, plan from pg_store_plans order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
+SELECT * FROM orders WHERE order_date = CURRENT_DATE -1;
+SELECT * FROM orders WHERE order_date = CURRENT_DATE -2;
 
-WITH min_customer AS (
-     -- Find and return the customer with the minimum customer_id
-     SELECT MIN(customer_id) AS customer_id
-     FROM customers
-)
-DELETE FROM payments
-WHERE order_id IN (
-    SELECT order_id
-    FROM orders
-    WHERE order_date > current_date - 10 and customer_id = (SELECT customer_id FROM min_customer)
-);
-WITH min_customer AS (
-     -- Find and return the customer with the minimum customer_id
-     SELECT MIN(customer_id) AS customer_id
-     FROM customers
-)
-DELETE FROM payments
-WHERE order_id IN (
-    SELECT order_id
-    FROM orders
-    WHERE order_date > current_date - 20 and customer_id = (SELECT customer_id FROM min_customer)
-);
+SELECT * FROM orders WHERE order_date = CURRENT_DATE -1 or order_date = current_date - 2;
+
 
 \o
 select calls, plan from pg_store_plans order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
-drop TABLE addresses;
-drop TABLE payments;
-drop TABLE order_details;
-drop TABLE orders;
-drop TABLE employees;
-drop TABLE branches;
-drop TABLE products;
-drop TABLE customers;
-drop TABLE countries;
-drop TABLE regions;
+-- drop TABLE addresses;
+-- drop TABLE payments;
+-- drop TABLE order_details;
+-- drop TABLE orders;
+-- drop TABLE employees;
+-- drop TABLE branches;
+-- drop TABLE products;
+-- drop TABLE customers;
+-- drop TABLE countries;
+-- drop TABLE regions;

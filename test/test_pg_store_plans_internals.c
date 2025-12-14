@@ -1,6 +1,7 @@
 #include "postgres.h"
 #include "optimizer/planner.h"
 #include "commands/explain.h"
+#include "executor/spi.h"
 
 #if PG_VERSION_NUM >= 160000
 #include "nodes/queryjumble.h"
@@ -11,7 +12,6 @@
 #include "access/hash.h"
 #include "../pgsp_jumble.h"
 #include "../pgsp_hash.h"
-#include <spi.h>
 
 
 PG_MODULE_MAGIC;
@@ -54,7 +54,7 @@ test_hash_operations(PG_FUNCTION_ARGS)
 {
     StringInfoData buf;
     int num_plans = 10000;
-    PlannedStmt **stmts;
+    uint64 *stmts; 
     uint64 *planIds;
     uint64 retrieved;
     long num_entries;
@@ -66,7 +66,7 @@ test_hash_operations(PG_FUNCTION_ARGS)
     initStringInfo(&buf);
 
     /* Allocate arrays */
-    stmts = palloc(sizeof(PlannedStmt *) * num_plans);
+    stmts = palloc(sizeof(uint64 *) * num_plans);
     planIds = palloc(sizeof(uint64) * num_plans);
 
     /* Test 1: Initialize */
@@ -83,7 +83,7 @@ test_hash_operations(PG_FUNCTION_ARGS)
     /* Test 2: Stresstest the hash table: Insert entries */
     for (i = 0; i < num_plans; i++)
     {
-        stmts[i] = makeNode(PlannedStmt);
+        stmts[i] = 50000 + i;
         planIds[i] = 100000 + i;
         pgsp_cache_plan_id(stmts[i], planIds[i]);
     }
@@ -146,9 +146,6 @@ test_hash_operations(PG_FUNCTION_ARGS)
         success = false;
     }
 
-    /* Cleanup */
-    for (i = 0; i < num_plans; i++)
-        pfree(stmts[i]);
     pfree(stmts);
     pfree(planIds);
 
@@ -1744,9 +1741,6 @@ static bool test_nodes(StringInfo buf)
         appendStringInfo(buf, "PASS\n");
     else
         appendStringInfo(buf, "FAIL (planId: " UINT64_FORMAT ")\n", planId1);      
-    pfree(jstate->jumble);
-    pfree(jstate);
-
     pfree(jstate->jumble);
     pfree(jstate);
 

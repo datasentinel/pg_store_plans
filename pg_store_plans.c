@@ -40,9 +40,7 @@
 #include "catalog/pg_authid.h"
 #include "commands/explain.h"
 #include "access/hash.h"
-#if PG_VERSION_NUM >= 90500
 #include "access/parallel.h"
-#endif
 #include "executor/instrument.h"
 #include "funcapi.h"
 #include "mb/pg_wchar.h"
@@ -75,10 +73,6 @@ PG_MODULE_MAGIC;
 #define PGSP_DUMP_FILE	"global/pg_store_plans.stat"
 #define PGSP_TEXT_FILE	PG_STAT_TMP_DIR "/pgsp_plan_texts.stat"
 
-#if PG_VERSION_NUM < 90500
-#define		IsParallelWorker()		(false)
-#endif
-
 /* PostgreSQL major version number, changes in which invalidate all entries */
 static const uint32 PGSP_PG_MAJOR_VERSION = PG_VERSION_NUM / 100;
 
@@ -95,14 +89,8 @@ static int max_plan_len = 5000;
 #define STICKY_DECREASE_FACTOR	(0.50)	/* factor for sticky entries */
 #define USAGE_DEALLOC_PERCENT	5		/* free this % of entries at once */
 
-/* In PostgreSQL 11, queryid becomes a uint64 internally. */
-#if PG_VERSION_NUM >= 110000
 typedef uint64 queryid_t;
 #define PGSP_NO_QUERYID		UINT64CONST(0)
-#else
-typedef uint32 queryid_t;
-#define PGSP_NO_QUERYID		0
-#endif
 
 /*
  * Extension version number, for supporting older extension versions' objects
@@ -296,24 +284,11 @@ static int  plan_storage = PLAN_STORAGE_FILE;	/* Plan storage type */
 /* disables tracking overriding track_level */
 static bool force_disabled = false;
 
-#if PG_VERSION_NUM >= 140000
-/*
- * For pg14 and later, we rely on core queryid calculation.  If
- * it's not available it means that the admin explicitly refused to
- * compute it, for performance reason or other.  In that case, we
- * will also consider that this extension is disabled.
- */
 #define pgsp_enabled(q) \
 	(!force_disabled &&											  \
 	 (track_level >= TRACK_LEVEL_ALL ||							  \
 	  (track_level == TRACK_LEVEL_TOP && nested_level == 0)) &&	  \
 	 (q != PGSP_NO_QUERYID))
-#else
-#define pgsp_enabled(q) \
-	(!force_disabled &&											\
-	 (track_level >= TRACK_LEVEL_ALL ||							\
-	  (track_level == TRACK_LEVEL_TOP && nested_level == 0)))
-#endif
 
 #define SHMEM_PLAN_PTR(ent) (((char *) ent) + sizeof(pgspEntry))
 
@@ -347,15 +322,7 @@ PG_FUNCTION_INFO_V1(pg_store_plans_xmlplan);
 PG_FUNCTION_INFO_V1(pg_store_plans_textplan);
 PG_FUNCTION_INFO_V1(pg_store_plans_info);
 
-#if PG_VERSION_NUM < 130000
-#define COMPTAG_TYPE char
-#else
 #define COMPTAG_TYPE QueryCompletion
-#endif
-
-#if PG_VERSION_NUM < 140000
-#define ROLE_PG_READ_ALL_STATS		DEFAULT_ROLE_READ_ALL_STATS
-#endif
 
 #if PG_VERSION_NUM >= 150000
 static shmem_request_hook_type prev_shmem_request_hook = NULL;
@@ -371,9 +338,7 @@ static void pgsp_ExecutorRun(QueryDesc *queryDesc,
 static void pgsp_ExecutorFinish(QueryDesc *queryDesc);
 static void pgsp_ExecutorEnd(QueryDesc *queryDesc);
 static void pgsp_ProcessUtility(PlannedStmt *pstmt, const char *queryString,
-#if PG_VERSION_NUM >= 140000
 					bool readOnlyTree,
-#endif
 					ProcessUtilityContext context, ParamListInfo params,
 					QueryEnvironment *queryEnv,
 					DestReceiver *dest, COMPTAG_TYPE *completionTag);
@@ -415,13 +380,12 @@ _PG_init(void)
 	 */
 	if (!process_shared_preload_libraries_in_progress)
 		return;
-#if PG_VERSION_NUM >= 140000
+
 	/*
-	 * Inform the postmaster that we want to enable query_id calculation if
+     * Inform the postmaster that we want to enable query_id calculation if
 	 * compute_query_id is set to auto.
 	 */
 	EnableQueryId();
-#endif
 
 	/*
 	 * Define (or redefine) custom GUC variables.
@@ -1036,9 +1000,7 @@ pgsp_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 		oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
 		queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL
-#if PG_VERSION_NUM >= 140000
 										  , false
-#endif
 										 );
 		MemoryContextSwitchTo(oldcxt);
 	}
@@ -1115,20 +1077,8 @@ pgsp_ExecutorEnd(QueryDesc *queryDesc)
 			uint64 planId;
 
 			queryid = queryDesc->plannedstmt->queryId;
-#if PG_VERSION_NUM < 140000
-			/*
-			 * For versions before pg14, a queryid is only available if
-			 * pg_stat_statements extension (or similar) if configured.  We
-			 * don't want a hard requirement for such an extension so fallback
-			 * to an internal queryid calculation in some case.
-			 * For pg14 and above, core postgres can compute a queryid so we
-			 * will rely on it.
-			 */
-			if (queryid == PGSP_NO_QUERYID)
-				queryid = (queryid_t) hash_query(queryDesc->sourceText);
-#else
+
 			Assert(queryid != PGSP_NO_QUERYID);
-#endif
 
 			planId = pgsp_get_cached_plan_id(queryid);
 
@@ -1156,9 +1106,7 @@ pgsp_ExecutorEnd(QueryDesc *queryDesc)
  */
 static void
 pgsp_ProcessUtility(PlannedStmt *pstmt, const char *queryString,
-#if PG_VERSION_NUM >= 140000
 					bool readOnlyTree,
-#endif
 					ProcessUtilityContext context, ParamListInfo params,
 					QueryEnvironment *queryEnv,
 					DestReceiver *dest, COMPTAG_TYPE *completionTag)
@@ -1179,17 +1127,13 @@ pgsp_ProcessUtility(PlannedStmt *pstmt, const char *queryString,
 		if (prev_ProcessUtility)
 		{
 			prev_ProcessUtility(pstmt, queryString,
-#if PG_VERSION_NUM >= 140000
 								readOnlyTree,
-#endif
 								context, params, queryEnv,
 								dest, completionTag);
 		}
 		else
 			standard_ProcessUtility(pstmt, queryString,
-#if PG_VERSION_NUM >= 140000
 									readOnlyTree,
-#endif
 									context, params, queryEnv,
 									dest, completionTag);
 

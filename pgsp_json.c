@@ -12,9 +12,7 @@
  */
 
 #include "postgres.h"
-#if PG_VERSION_NUM >= 130000
 #include "mb/pg_wchar.h"
-#endif
 #include "miscadmin.h"
 #include "nodes/nodes.h"
 #include "nodes/parsenodes.h"
@@ -22,11 +20,7 @@
 #include "parser/scanner.h"
 #include "utils/xml.h"
 #include "utils/json.h"
-#if PG_VERSION_NUM < 130000
-#include "utils/jsonapi.h"
-#else
 #include "common/jsonapi.h"
-#endif
 #include "pgsp_json.h"
 #include "pgsp_json_int.h"
 
@@ -231,26 +225,15 @@ word_table nodetypes[] =
 	{T_SetOp,		"3" ,"SetOp",			NULL, false, NULL, NULL},
 	{T_LockRows,	"4" ,"LockRows",		NULL, false, NULL, NULL},
 	{T_Limit,		"5" ,"Limit",			NULL, false, NULL, NULL},
-#if PG_VERSION_NUM >= 90500
 	{T_SampleScan,	"B" ,"Sample Scan",		NULL, false, NULL, NULL},
-#endif
-#if PG_VERSION_NUM >= 90600
 	{T_Gather,		"6" ,"Gather",			NULL, false, NULL, NULL},
-#endif
-#if PG_VERSION_NUM >= 100000
 	{T_ProjectSet,	"7" ,"ProjectSet",		NULL, false, NULL, NULL},
 	{T_TableFuncScan,"8","Table Function Scan",	NULL, false, NULL, NULL},
 	{T_NamedTuplestoreScan,"9","Named Tuplestore Scan",	NULL, false, NULL, NULL},
 	{T_GatherMerge,	"A" ,"Gather Merge",	NULL, false, NULL, NULL},
-#endif
-#if PG_VERSION_NUM >= 130000
 	{T_IncrementalSort,	"C" ,"Incremental Sort", NULL, false, NULL, NULL},
-#endif
-#if PG_VERSION_NUM >= 140000
 	{T_TidRangeScan,"D", "Tid Range Scan",	NULL, false, NULL, NULL},
 	{T_Memoize,		"E", "Memoize",			NULL, false, NULL, NULL},
-#endif
-
 	{T_Invalid,		NULL, NULL, NULL, false, NULL, NULL}
 };
 
@@ -496,11 +479,6 @@ norm_yylex(char *str, core_YYSTYPE *yylval, YYLTYPE *yylloc, core_yyscan_t yysca
  * uniqueness, preserve_space puts one space for one existent whitespace for
  * more readability.
  */
-/* scanner interface is changed in PG12 */
-#if PG_VERSION_NUM < 120000
-#define ScanKeywords (*ScanKeywords)
-#define ScanKeywordTokens NumScanKeywords
-#endif
 void
 normalize_expr(char *expr, bool preserve_space)
 {
@@ -523,9 +501,7 @@ normalize_expr(char *expr, bool preserve_space)
 	 * The warnings about nonstandard escape strings is already emitted in the
 	 * core. Just silence them here.
 	 */
-#if PG_VERSION_NUM >= 90500
 	yyextra.escape_string_warning = false;
-#endif
 	lasttok = 0;
 	lastloc = -1;
 
@@ -551,7 +527,6 @@ normalize_expr(char *expr, bool preserve_space)
 				memcpy(wp, expr + i, i2 - i);
 				wp += i2 - i;
 			}
-#if PG_VERSION_NUM >= 100000
 			/*
 			 * Since PG10 pg_stat_statements doesn't store trailing semicolon
 			 * in the column "query". Normalization is basically useless in the
@@ -562,7 +537,6 @@ normalize_expr(char *expr, bool preserve_space)
 			{
 				/* Just do nothing */
 			}
-#endif
 			else
 			{
 				/* Upcase keywords */
@@ -1280,48 +1254,7 @@ init_parser_context(pgspParserContext *ctx, int mode,
 bool
 run_pg_parse_json(JsonLexContext *lex, JsonSemAction *sem)
 {
-#if PG_VERSION_NUM >= 130000
 	return pg_parse_json(lex, sem) == JSON_SUCCESS;
-#else
-	MemoryContext ccxt = CurrentMemoryContext;
-	uint32 saved_IntrHoldoffCount;
-
-	/*
-	 * "ereport(ERROR.." occurs on error in pg_parse_json resets
-	 * InterruptHoldoffCount to zero, so we must save the value before calling
-	 * json parser to restore it on parse error. See errfinish().
-	 */
-	saved_IntrHoldoffCount = InterruptHoldoffCount;
-
-	PG_TRY();
-	{
-		pg_parse_json(lex, sem);
-	}
-	PG_CATCH();
-	{
-		ErrorData *errdata;
-		MemoryContext ecxt;
-
-		InterruptHoldoffCount = saved_IntrHoldoffCount;
-
-		ecxt = MemoryContextSwitchTo(ccxt);
-		errdata = CopyErrorData();
-
-		if (errdata->sqlerrcode == ERRCODE_INVALID_TEXT_REPRESENTATION)
-		{
-			FlushErrorState();
-			return false;
-		}
-		else
-		{
-			MemoryContextSwitchTo(ecxt);
-			PG_RE_THROW();
-		}
-	}
-	PG_END_TRY();
-
-	return true;
-#endif
 }
 
 void
@@ -1332,9 +1265,7 @@ init_json_lex_context(JsonLexContext *lex, char *json)
 	lex->input = lex->token_terminator = lex->line_start = json;
 	lex->line_number = 1;
 	lex->input_length = strlen(json);
-#if PG_VERSION_NUM >= 130000
 	lex->input_encoding = GetDatabaseEncoding();
-#endif							/* PG13+ */
 	lex->strval = makeStringInfo();
 #else							/* PG17- */
 	makeJsonLexContextCstringLen(lex, json, strlen(json),

@@ -31,33 +31,7 @@ static void pgspExplainProperty(const char *qlabel, const char *value, bool nume
 							ExplainState *es);
 static void pgspExplainJSONLineEnding(ExplainState *es);
 
-/*
- * ExplainState is modified at 9.4.1 and 9.3.6. But the change is for
- * internal use and to avoid binary-incompatibility not changing the
- * size of ExplainState. So we can use ExplainState->extra as if it
- * were grouping_stack safely and should do so. Using ->extra as List*
- * discards the memory for ExplainStateExtra but it is not a problem
- * since it is allocated by palloc.
- */
-#if (PG_VERSION_NUM >= 90401 && PG_VERSION_NUM < 90500) || \
-	(PG_VERSION_NUM >= 90306 && PG_VERSION_NUM < 90400)
-#define GROUPING_STACK(es) (*((List **)(&(es)->extra)))
-#else
 #define GROUPING_STACK(es) ((es)->grouping_stack)
-#endif
-
-/* ExplainInitState() is replaced with NewExlainState() in 9.5 */
-#if PG_VERSION_NUM < 90500
-ExplainState *
-NewExplainState(void)
-{
-  ExplainState *es = (ExplainState *)palloc0(sizeof(ExplainState));
-
-  ExplainInitState(es);
-  es->costs = true;
-  return es;
-}
-#endif
 
 void
 pgspExplainTriggers(ExplainState *es, QueryDesc *queryDesc)
@@ -66,37 +40,23 @@ pgspExplainTriggers(ExplainState *es, QueryDesc *queryDesc)
 	{
 		ResultRelInfo *rInfo;
 		bool		show_relname;
-#if PG_VERSION_NUM < 140000
-		int         numrels = queryDesc->estate->es_num_result_relations;
-		int         nr;
-#else
 		List       *resultrels;
 		List       *routerels;
-#endif
 		List	   *targrels = queryDesc->estate->es_trig_target_relations;
 		ListCell   *l;
 
-#if PG_VERSION_NUM >= 140000
 		resultrels = queryDesc->estate->es_opened_result_relations;
 		routerels = queryDesc->estate->es_tuple_routing_result_relations;
 		targrels = queryDesc->estate->es_trig_target_relations;
-#endif
 
 		pgspExplainOpenGroup("Triggers", "Triggers", false, es);
 
-#if PG_VERSION_NUM < 140000
-		show_relname = (numrels > 1 || targrels != NIL);
-		rInfo = queryDesc->estate->es_result_relations;
-		for (nr = 0; nr < numrels; rInfo++, nr++)
-#else
 		show_relname = (list_length(resultrels) > 1 ||
 						routerels != NIL || targrels != NIL);
 		foreach(l, resultrels)
 		{
 			rInfo = (ResultRelInfo *) lfirst(l);
-#endif
 			report_triggers(rInfo, show_relname, es);
-#if PG_VERSION_NUM >= 140000
 		}
 
 		foreach(l, routerels)
@@ -104,7 +64,6 @@ pgspExplainTriggers(ExplainState *es, QueryDesc *queryDesc)
 			rInfo = (ResultRelInfo *) lfirst(l);
 			report_triggers(rInfo, show_relname, es);
 		}
-#endif
 
 		foreach(l, targrels)
 		{

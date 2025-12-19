@@ -36,7 +36,10 @@ SELECT test_jumble_plan_tree();
  Test: Different index IDs scans- PASS                      +
  Test: same index IDs scans with different directions - PASS+
  Test: nested loop join types - PASS                        +
+ Test: hash join types - PASS                               +
+ Test: merge join types - PASS                              +
  Test: Different foreign scan relids - PASS                 +
+ Test: SubqueryScan with different subplans - PASS          +
  Test: Different custom scan relids - PASS                  +
  Test: Gather with different num_workers - PASS             +
  Test: Gather with different single_copy flag - PASS        +

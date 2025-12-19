@@ -48,15 +48,10 @@ void
 pgsp_check_and_clear_plan_id_cache(void)
 {
 	long num_entries;
-	long mem_used;
 	
     if (!pgsp_plan_id_cache)
 		return;
 	
-
-        
-    mem_used = hash_get_num_entries(pgsp_plan_id_cache) * sizeof(PgspPlanIdCacheEntry);
-    elog(DEBUG3, "pg_store_plans: plan_id_cache memory used: %ld bytes", mem_used);
 	num_entries = hash_get_num_entries(pgsp_plan_id_cache);
     elog(DEBUG3, "pg_store_plans: plan_id_cache entries: %ld", num_entries);
 	

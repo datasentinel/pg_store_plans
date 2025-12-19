@@ -129,6 +129,10 @@ pgsp_jumble_range_table(JumbleState *jstate, List *rtable)
 	}
 }
 
+/*
+ * Jumble a Node to generate a unique fingerprint.
+ * Not all Exprs are handled here; only those relevant to plan structure.
+ */
 void
 pgsp_jumble_node(JumbleState *jstate, Node *node)
 {
@@ -138,6 +142,9 @@ pgsp_jumble_node(JumbleState *jstate, Node *node)
 		return;
 	}
 	
+	/* Guard against stack overflow due to overly complex expressions */
+	check_stack_depth();
+
 	/* Jumble the node type first */
 	APP_JUMB(nodeTag(node));
 

@@ -278,7 +278,7 @@ select calls, plan from pg_store_plans order by calls, plan;
        |               Filter: ((branch_name)::text = ANY ('{Branch_10,Branch_1}'::text[]))
      1 | Result  (cost=0.00..0.01 rows=1 width=4)
      2 | Nested Loop  (cost=0.00..26.85 rows=3 width=854)                                  +
-       |   Join Filter: (b.branch_id = e.branch_id)                                        +
+       |   Join Filter: (e.branch_id = b.branch_id)                                        +
        |   ->  Seq Scan on employees e  (cost=0.00..11.40 rows=140 width=540)              +
        |   ->  Materialize  (cost=0.00..11.26 rows=2 width=322)                            +
        |         ->  Seq Scan on branches b  (cost=0.00..11.25 rows=2 width=322)           +

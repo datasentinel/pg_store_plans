@@ -20,7 +20,11 @@ PG_FUNCTION_INFO_V1(test_hash_operations);
 PG_FUNCTION_INFO_V1(test_jumble_operations);
 PG_FUNCTION_INFO_V1(test_jumble_plan_tree);
 
+#if PG_VERSION_NUM >= 160000
 static const char *PLAN_TREE_STRING_1 = "{NESTLOOP :join.plan.startup_cost 1004.93875 :join.plan.total_cost 230385.06479166666 :join.plan.plan_rows 8843570 :join.plan.plan_width 116 :join.plan.parallel_aware false :join.plan.parallel_safe false :join.plan.async_capable false :join.plan.plan_node_id 0 :join.plan.targetlist ({TARGETENTRY :expr {VAR :varno -1 :varattno 1 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 1 :location -1} :resno 1 :resname tid :ressortgroupref 0 :resorigtbl 16489 :resorigcol 1 :resjunk false} {TARGETENTRY :expr {VAR :varno -1 :varattno 2 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 2 :location -1} :resno 2 :resname bid :ressortgroupref 0 :resorigtbl 16489 :resorigcol 2 :resjunk false} {TARGETENTRY :expr {VAR :varno -1 :varattno 3 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 3 :location -1} :resno 3 :resname aid :ressortgroupref 0 :resorigtbl 16489 :resorigcol 3 :resjunk false} {TARGETENTRY :expr {VAR :varno -1 :varattno 4 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 4 :location -1} :resno 4 :resname delta :ressortgroupref 0 :resorigtbl 16489 :resorigcol 4 :resjunk false} {TARGETENTRY :expr {VAR :varno -1 :varattno 5 :vartype 1114 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 5 :location -1} :resno 5 :resname mtime :ressortgroupref 0 :resorigtbl 16489 :resorigcol 5 :resjunk false} {TARGETENTRY :expr {VAR :varno -1 :varattno 6 :vartype 1042 :vartypmod 26 :varcollid 100 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 6 :location -1} :resno 6 :resname filler :ressortgroupref 0 :resorigtbl 16489 :resorigcol 6 :resjunk false}) :join.plan.qual <> :join.plan.lefttree {GATHER :plan.startup_cost 1000 :plan.total_cost 119805.22604166667 :plan.plan_rows 104042 :plan.plan_width 4 :plan.parallel_aware false :plan.parallel_safe false :plan.async_capable false :plan.plan_node_id 1 :plan.targetlist ({TARGETENTRY :expr {VAR :varno -2 :varattno 1 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 2 :varattnosyn 2 :location -1} :resno 1 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false}) :plan.qual <> :plan.lefttree {SEQSCAN :scan.plan.startup_cost 0 :scan.plan.total_cost 108401.02604166667 :scan.plan.plan_rows 43351 :scan.plan.plan_width 4 :scan.plan.parallel_aware true :scan.plan.parallel_safe true :scan.plan.async_capable false :scan.plan.plan_node_id 2 :scan.plan.targetlist ({TARGETENTRY :expr {VAR :varno 2 :varattno 2 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 2 :varattnosyn 2 :location -1} :resno 1 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false}) :scan.plan.qual ({OPEXPR :opno 96 :opfuncid 65 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 0 :args ({VAR :varno 2 :varattno 2 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 2 :varattnosyn 2 :location -1} {CONST :consttype 23 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 1 0 0 0 0 0 0 0 ]}) :location -1}) :scan.plan.lefttree <> :scan.plan.righttree <> :scan.plan.initPlan <> :scan.plan.extParam (b 0) :scan.plan.allParam (b 0) :scan.scanrelid 2} :plan.righttree <> :plan.initPlan <> :plan.extParam (b) :plan.allParam (b) :num_workers 2 :rescan_param 0 :single_copy false :invisible false :initParam (b)} :join.plan.righttree {MATERIAL :plan.startup_cost 4.938750000000001 :plan.total_cost 35.42625 :plan.plan_rows 85 :plan.plan_width 116 :plan.parallel_aware false :plan.parallel_safe true :plan.async_capable false :plan.plan_node_id 3 :plan.targetlist ({TARGETENTRY :expr {VAR :varno -2 :varattno 1 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 1 :location -1} :resno 1 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno -2 :varattno 2 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 2 :location -1} :resno 2 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno -2 :varattno 3 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 3 :location -1} :resno 3 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno -2 :varattno 4 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 4 :location -1} :resno 4 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno -2 :varattno 5 :vartype 1114 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 5 :location -1} :resno 5 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno -2 :varattno 6 :vartype 1042 :vartypmod 26 :varcollid 100 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 6 :location -1} :resno 6 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false}) :plan.qual <> :plan.lefttree {BITMAPHEAPSCAN :scan.plan.startup_cost 4.938750000000001 :scan.plan.total_cost 35.00125 :scan.plan.plan_rows 85 :scan.plan.plan_width 116 :scan.plan.parallel_aware false :scan.plan.parallel_safe true :scan.plan.async_capable false :scan.plan.plan_node_id 4 :scan.plan.targetlist ({TARGETENTRY :expr {VAR :varno 1 :varattno 1 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 1 :location -1} :resno 1 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno 1 :varattno 2 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 2 :location -1} :resno 2 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno 1 :varattno 3 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 3 :location -1} :resno 3 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno 1 :varattno 4 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 4 :location -1} :resno 4 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno 1 :varattno 5 :vartype 1114 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 5 :location -1} :resno 5 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} {TARGETENTRY :expr {VAR :varno 1 :varattno 6 :vartype 1042 :vartypmod 26 :varcollid 100 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 6 :location -1} :resno 6 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false}) :scan.plan.qual <> :scan.plan.lefttree {BITMAPINDEXSCAN :scan.plan.startup_cost 0 :scan.plan.total_cost 4.9175 :scan.plan.plan_rows 85 :scan.plan.plan_width 0 :scan.plan.parallel_aware false :scan.plan.parallel_safe true :scan.plan.async_capable false :scan.plan.plan_node_id 5 :scan.plan.targetlist <> :scan.plan.qual <> :scan.plan.lefttree <> :scan.plan.righttree <> :scan.plan.initPlan <> :scan.plan.extParam (b) :scan.plan.allParam (b) :scan.scanrelid 1 :indexid 196878 :isshared false :indexqual ({OPEXPR :opno 96 :opfuncid 65 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 0 :args ({VAR :varno -3 :varattno 1 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 2 :location -1} {CONST :consttype 23 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 1 0 0 0 0 0 0 0 ]}) :location -1}) :indexqualorig ({OPEXPR :opno 96 :opfuncid 65 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 0 :args ({VAR :varno 1 :varattno 2 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 2 :location -1} {CONST :consttype 23 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 1 0 0 0 0 0 0 0 ]}) :location -1})} :scan.plan.righttree <> :scan.plan.initPlan <> :scan.plan.extParam (b) :scan.plan.allParam (b) :scan.scanrelid 1 :bitmapqualorig ({OPEXPR :opno 96 :opfuncid 65 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 0 :args ({VAR :varno 1 :varattno 2 :vartype 23 :vartypmod -1 :varcollid 0 :varnullingrels (b) :varlevelsup 0 :varnosyn 1 :varattnosyn 2 :location -1} {CONST :consttype 23 :consttypmod -1 :constcollid 0 :constlen 4 :constbyval true :constisnull false :location -1 :constvalue 4 [ 1 0 0 0 0 0 0 0 ]}) :location -1})} :plan.righttree <> :plan.initPlan <> :plan.extParam (b) :plan.allParam (b)} :join.plan.initPlan <> :join.plan.extParam (b) :join.plan.allParam (b) :join.jointype 0 :join.inner_unique false :join.joinqual <> :nestParams <>}";
+#else
+static const char *PLAN_TREE_STRING_1 = "{INDEXONLYSCAN :startup_cost 0.28 :total_cost 8.29 :plan_rows 1 :plan_width 11 :parallel_aware false :parallel_safe true :async_capable false :plan_node_id 0 :targetlist ({TARGETENTRY :expr {VAR :varno -3 :varattno 1 :vartype 1043 :vartypmod 104 :varcollid 100 :varlevelsup 0 :varnosyn 1 :varattnosyn 3 :location 7} :resno 1 :resname last_name :ressortgroupref 0 :resorigtbl 17453 :resorigcol 3 :resjunk false}) :qual <> :lefttree <> :righttree <> :initPlan <> :extParam (b) :allParam (b) :scanrelid 1 :indexid 17460 :indexqual ({OPEXPR :opno 98 :opfuncid 67 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 100 :args ({VAR :varno -3 :varattno 1 :vartype 1043 :vartypmod 104 :varcollid 100 :varlevelsup 0 :varnosyn 1 :varattnosyn 3 :location 38} {CONST :consttype 25 :consttypmod -1 :constcollid 100 :constlen -1 :constbyval false :constisnull false :location 48 :constvalue 13 [ 52 0 0 0 99 117 115 116 111 109 101 114 49 ]}) :location 47}) :recheckqual ({OPEXPR :opno 98 :opfuncid 67 :opresulttype 16 :opretset false :opcollid 0 :inputcollid 100 :args ({RELABELTYPE :arg {VAR :varno -3 :varattno 1 :vartype 1043 :vartypmod 104 :varcollid 100 :varlevelsup 0 :varnosyn 1 :varattnosyn 3 :location 38} :resulttype 25 :resulttypmod -1 :resultcollid 100 :relabelformat 2 :location -1} {CONST :consttype 25 :consttypmod -1 :constcollid 100 :constlen -1 :constbyval false :constisnull false :location 48 :constvalue 13 [ 52 0 0 0 99 117 115 116 111 109 101 114 49 ]}) :location 47}) :indexorderby <> :indextlist ({TARGETENTRY :expr {VAR :varno 1 :varattno 3 :vartype 1043 :vartypmod 104 :varcollid 100 :varlevelsup 0 :varnosyn 1 :varattnosyn 3 :location -1} :resno 1 :resname <> :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false}) :indexorderdir 1}";
+#endif
 
 #define JUMBLE_SIZE				1024	/* serialization buffer size */
 
@@ -30,6 +34,9 @@ static const char *PLAN_TREE_STRING_1 = "{NESTLOOP :join.plan.startup_cost 1004.
 static bool test_different_index_ids(StringInfo buf);
 static bool test_same_index_different_directions(StringInfo buf);
 static bool test_nested_loop(StringInfo buf);
+static bool test_hash_join(StringInfo buf);
+static bool test_merge_join(StringInfo buf);
+static bool test_subquery_scans(StringInfo buf);
 static bool test_foreign_scans(StringInfo buf);
 static bool test_custom_scans(StringInfo buf);
 static bool test_seq_scans(StringInfo buf);
@@ -105,7 +112,9 @@ test_hash_operations(PG_FUNCTION_ARGS)
     {
         retrieved = pgsp_get_cached_plan_id(stmts[i]);
         if (retrieved == 0)
+        {
             not_retrieved_count++;
+        }
         else {
             retrieved_count++;
             pgsp_remove_plan_id(stmts[i]);
@@ -169,17 +178,26 @@ test_jumble_operations(PG_FUNCTION_ARGS)
 
     /* Create a simple plan node */
     scan = makeNode(SeqScan);
+#if PG_VERSION_NUM >= 150000
     scan->scan.scanrelid = 1;
+    APP_JUMB(scan->scan.scanrelid);
+#else
+    scan->scanrelid = 1;
+    APP_JUMB(scan->scanrelid);
+#endif
 
     /* Test: Jumble the same node twice, should get same hash */
-    APP_JUMB(scan->scan.scanrelid);
     
     hash1 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
 
     /* Reset and do it again */
     jstate->jumble_len = 0;
-    APP_JUMB(scan->scan.scanrelid);
 
+#if PG_VERSION_NUM >= 150000
+    APP_JUMB(scan->scan.scanrelid);
+#else
+    APP_JUMB(scan->scanrelid);
+#endif
     
     hash2 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
 
@@ -222,7 +240,13 @@ test_jumble_plan_tree(PG_FUNCTION_ARGS)
         success = false;
     if (!test_nested_loop(&buf))
         success = false;
+    if (!test_hash_join(&buf))
+        success = false;
+    if (!test_merge_join(&buf))
+        success = false;
     if (!test_foreign_scans(&buf))
+        success = false;
+    if (!test_subquery_scans(&buf))
         success = false;
     if (!test_custom_scans(&buf))
         success = false;
@@ -549,6 +573,140 @@ test_same_index_different_directions(StringInfo buf)
 }
 
 static bool
+test_merge_join(StringInfo buf)
+{
+    MergeJoin *mjoin1, *mjoin2;
+    JumbleState *jstate;
+    uint64 planId1, planId2;
+
+    jstate = pgsp_init_jumble_state();
+
+    mjoin1 = makeNode(MergeJoin);
+    mjoin1->join.joinqual = NULL;
+    mjoin1->join.jointype = JOIN_INNER;
+    mjoin1->join.inner_unique = false;
+
+    mjoin2 = makeNode(MergeJoin);
+    mjoin2->join.joinqual = NULL;
+    mjoin2->join.jointype = JOIN_LEFT;
+    mjoin2->join.inner_unique = false;
+
+    pgsp_jumble_plan_tree(jstate, (Plan *) mjoin1);
+    planId1 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    pfree(jstate->jumble);
+    pfree(jstate);
+    jstate = pgsp_init_jumble_state();
+    pgsp_jumble_plan_tree(jstate, (Plan *) mjoin2);
+    planId2 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    appendStringInfo(buf, "Test: merge join types - ");
+    if (planId1 != planId2)
+        appendStringInfo(buf, "PASS\n");
+    else
+        appendStringInfo(buf, "FAIL (both planIds: " UINT64_FORMAT ")\n", planId1);
+
+    pfree(mjoin1);
+    pfree(mjoin2);
+    pfree(jstate->jumble);
+    pfree(jstate);
+
+    return (planId1 != planId2);
+}
+
+static bool test_subquery_scans(StringInfo buf)
+{
+    SubqueryScan *sscan1, *sscan2;
+    JumbleState *jstate;
+    uint64 planId1, planId2;
+    Plan *subplan1, *subplan2;
+
+    jstate = pgsp_init_jumble_state();
+
+    /* Test 1: SubqueryScan with a specific subplan */
+    sscan1 = makeNode(SubqueryScan);
+    sscan1->scan.scanrelid = 1;
+    subplan1 = (Plan *) makeNode(SeqScan);
+    subplan1->plan_node_id = 1;
+    sscan1->subplan = subplan1;
+
+    pgsp_jumble_plan_tree(jstate, (Plan *) sscan1);
+    planId1 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    pfree(jstate->jumble);
+    pfree(jstate);
+    jstate = pgsp_init_jumble_state();
+
+    /* Test 2: SubqueryScan with a different subplan */
+    sscan2 = makeNode(SubqueryScan);
+    sscan2->scan.scanrelid = 1;
+    subplan2 = (Plan *) makeNode(SeqScan);
+    subplan2->plan_node_id = 2; /* Different node ID in subplan makes it different */
+    sscan2->subplan = subplan2;
+
+    pgsp_jumble_plan_tree(jstate, (Plan *) sscan2);
+    planId2 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    appendStringInfo(buf, "Test: SubqueryScan with different subplans - ");
+    if (planId1 != planId2)
+        appendStringInfo(buf, "PASS\n");
+    else
+        appendStringInfo(buf, "FAIL (both planIds: " UINT64_FORMAT ")\n", planId1);
+
+    pfree(sscan1);
+    pfree(sscan2);
+    pfree(subplan1);
+    pfree(subplan2);
+
+    pfree(jstate->jumble);
+    pfree(jstate);
+
+    return (planId1 != planId2);
+}
+
+static bool
+test_hash_join(StringInfo buf)
+{
+    HashJoin *hjoin1, *hjoin2;
+    JumbleState *jstate;
+    uint64 planId1, planId2;
+
+    jstate = pgsp_init_jumble_state();
+
+    hjoin1 = makeNode(HashJoin);
+    hjoin1->join.joinqual = NULL;
+    hjoin1->join.jointype = JOIN_INNER;
+    hjoin1->join.inner_unique = false;
+
+    hjoin2 = makeNode(HashJoin);
+    hjoin2->join.joinqual = NULL;
+    hjoin2->join.jointype = JOIN_LEFT;
+    hjoin2->join.inner_unique = false;
+
+    pgsp_jumble_plan_tree(jstate, (Plan *) hjoin1);
+    planId1 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    pfree(jstate->jumble);
+    pfree(jstate);
+    jstate = pgsp_init_jumble_state();
+    pgsp_jumble_plan_tree(jstate, (Plan *) hjoin2);
+    planId2 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    appendStringInfo(buf, "Test: hash join types - ");
+    if (planId1 != planId2)
+        appendStringInfo(buf, "PASS\n");
+    else
+        appendStringInfo(buf, "FAIL (both planIds: " UINT64_FORMAT ")\n", planId1);
+
+    pfree(hjoin1);
+    pfree(hjoin2);
+    pfree(jstate->jumble);
+    pfree(jstate);
+
+    return (planId1 != planId2);
+}
+
+static bool
 test_nested_loop(StringInfo buf)
 {
     NestLoop *nloop1 , *nloop2;
@@ -599,11 +757,15 @@ static bool test_seq_scans(StringInfo buf)
     jstate = pgsp_init_jumble_state();
 
     scan1 = makeNode(SeqScan);
-    scan1->scan.scanrelid = 1;
-
     scan2 = makeNode(SeqScan);
-    scan2->scan.scanrelid = 2;
 
+#if PG_VERSION_NUM >= 150000
+    scan1->scan.scanrelid = 1;
+    scan2->scan.scanrelid = 2;
+#else
+    scan1->scanrelid = 1;
+    scan2->scanrelid = 2;
+#endif
     pgsp_jumble_plan_tree(jstate, (Plan *) scan1);
     planId1 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
 
@@ -960,9 +1122,15 @@ static bool test_append_plans(StringInfo buf)
     /* Test 1: Append with two child plans */
     append1 = makeNode(Append);
     scan1 = makeNode(SeqScan);
-    scan1->scan.scanrelid = 1;
     scan2 = makeNode(SeqScan);
+#if PG_VERSION_NUM >= 150000
+    scan1->scan.scanrelid = 1;
     scan2->scan.scanrelid = 2;
+#else
+    scan1->scanrelid = 1;
+    scan2->scanrelid = 2;
+#endif
+
     append1->appendplans = list_make2(scan1, scan2);
 
     pgsp_jumble_plan_tree(jstate, (Plan *) append1);
@@ -975,11 +1143,19 @@ static bool test_append_plans(StringInfo buf)
 
     append2 = makeNode(Append);
     scan1 = makeNode(SeqScan);
-    scan1->scan.scanrelid = 1;
     scan2 = makeNode(SeqScan);
-    scan2->scan.scanrelid = 2;
     scan3 = makeNode(SeqScan);
+
+#if PG_VERSION_NUM >= 150000
+    scan1->scan.scanrelid = 1;
+    scan2->scan.scanrelid = 2;
     scan3->scan.scanrelid = 3;
+#else
+    scan1->scanrelid = 1;
+    scan2->scanrelid = 2;
+    scan3->scanrelid = 3;
+#endif
+
     append2->appendplans = list_make3(scan1, scan2, scan3);
 
     pgsp_jumble_plan_tree(jstate, (Plan *) append2);
@@ -998,9 +1174,16 @@ static bool test_append_plans(StringInfo buf)
 
     append3 = makeNode(Append);
     scan1 = makeNode(SeqScan);
-    scan1->scan.scanrelid = 2;
     scan2 = makeNode(SeqScan);
+
+#if PG_VERSION_NUM >= 150000
+    scan1->scan.scanrelid = 2;
     scan2->scan.scanrelid = 1;
+#else
+    scan1->scanrelid = 2;
+    scan2->scanrelid = 1;
+#endif
+
     append3->appendplans = list_make2(scan1, scan2);
 
     pgsp_jumble_plan_tree(jstate, (Plan *) append3);

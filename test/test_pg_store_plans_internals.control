@@ -1,0 +1,5 @@
+comment = 'Test module for pg_store_plans internals'
+default_version = '1.0'
+module_pathname = '$libdir/test_pg_store_plans_internals'
+relocatable = true
+requires = 'pg_store_plans'

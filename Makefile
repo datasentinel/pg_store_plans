@@ -4,7 +4,7 @@ MODULES = pg_store_plans
 STOREPLANSVER = 1.9
 
 MODULE_big = pg_store_plans
-OBJS = pg_store_plans.o pgsp_json.o pgsp_json_text.o pgsp_explain.o
+OBJS = pg_store_plans.o pgsp_json.o pgsp_json_text.o pgsp_explain.o pgsp_hash.o pgsp_jumble.o
 
 EXTENSION = pg_store_plans
 
@@ -12,18 +12,12 @@ PG_VERSION := $(shell pg_config --version | sed "s/^PostgreSQL //" | sed "s/\.[0
 
 DATA = pg_store_plans--1.9.sql
 
-REGRESS = convert store
+REGRESS = convert store queries
 REGRESS_OPTS = --temp-config=regress.conf
-ifdef USE_PGXS
+
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
-else
-subdir = contrib/pg_store_plans
-top_builddir = ../..
-include $(top_builddir)/src/Makefile.global
-include $(top_srcdir)/contrib/contrib-global.mk
-endif
 
 STARBALL17 = pg_store_plans17-$(STOREPLANSVER).tar.gz
 STARBALLS = $(STARBALL17)
@@ -55,7 +49,7 @@ $(STARBALLS): $(TARSOURCES)
 rpm17: $(STARBALL17)
 	MAKE_ROOT=`pwd` rpmbuild -bb SPECS/pg_store_plans17.spec
 
-testfiles: convert.out convert.sql
+testfiles: convert.out convert.sql queries.sql
 
 convert.out: convert.sql
 	psql $(DBNAME) -a -q -X -f convert.sql > $@

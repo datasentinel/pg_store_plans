@@ -726,6 +726,16 @@ pgsp_shmem_startup(void)
 		pgver != PGSP_PG_MAJOR_VERSION)
 		goto data_error;
 
+	/* TODO */
+	/* check if num is out of range */
+	if (num < 0 || num > store_size)
+	{
+	    ereport(LOG,
+		    (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+		     errmsg("Invalid number of entries in file: %d", num)));
+	    goto data_error;
+	}
+
 	for (i = 0; i < num; i++)
 	{
 		pgspEntry	temp;
@@ -928,6 +938,9 @@ error:
 	if (file)
 		FreeFile(file);
 	unlink(PGSP_DUMP_FILE ".tmp");
+	if (pbuffer)
+		free(pbuffer);
+
 }
 
 /*
@@ -1266,6 +1279,7 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 		return;
 
 	/* Set up key for hashtable search */
+	memset(&key, 0, sizeof(key));
 	key.userid = GetUserId();
 	key.dbid = MyDatabaseId;
 	key.queryid = queryId;
@@ -1644,38 +1658,42 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 			else
 				pstr = SHMEM_PLAN_PTR(entry);
 
-			switch (plan_format)
-			{
-				case PLAN_FORMAT_TEXT:
-					mstr = pgsp_json_textize(pstr);
-					break;
-				case PLAN_FORMAT_JSON:
-					mstr = pgsp_json_inflate(pstr);
-					break;
-				case PLAN_FORMAT_YAML:
-					mstr = pgsp_json_yamlize(pstr);
-					break;
-				case PLAN_FORMAT_XML:
-					mstr = pgsp_json_xmlize(pstr);
-					break;
-				default:
-					mstr = pstr;
-					break;
+			if (pstr == NULL)
+				values[i++] = CStringGetTextDatum("<invalid plan>");
+			else {
+				switch (plan_format)
+				{
+					case PLAN_FORMAT_TEXT:
+						mstr = pgsp_json_textize(pstr);
+						break;
+					case PLAN_FORMAT_JSON:
+						mstr = pgsp_json_inflate(pstr);
+						break;
+					case PLAN_FORMAT_YAML:
+						mstr = pgsp_json_yamlize(pstr);
+						break;
+					case PLAN_FORMAT_XML:
+						mstr = pgsp_json_xmlize(pstr);
+						break;
+					default:
+						mstr = pstr;
+						break;
+				}
+
+				estr = (char *)
+					pg_do_encoding_conversion((unsigned char *) mstr,
+											strlen(mstr),
+											entry->encoding,
+											GetDatabaseEncoding());
+				values[i++] = CStringGetTextDatum(estr);
+		
+				if (estr != mstr)
+					pfree(estr);
+
+				if (mstr != pstr)
+					pfree(mstr);
+
 			}
-
-			estr = (char *)
-				pg_do_encoding_conversion((unsigned char *) mstr,
-										  strlen(mstr),
-										  entry->encoding,
-										  GetDatabaseEncoding());
-			values[i++] = CStringGetTextDatum(estr);
-
-			if (estr != mstr)
-				pfree(estr);
-
-			if (mstr != pstr)
-				pfree(mstr);
-
 			/* pstr is a pointer onto pbuffer */
 		}
 		else
@@ -1757,7 +1775,7 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 	if (pbuffer)
 		free(pbuffer);
 		
-	LWLockRelease(shared_state->lock);
+ 	LWLockRelease(shared_state->lock);
 }
 
 /* Number of output arguments (columns) for pg_stat_statements_info */

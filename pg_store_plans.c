@@ -726,15 +726,15 @@ pgsp_shmem_startup(void)
 		pgver != PGSP_PG_MAJOR_VERSION)
 		goto data_error;
 
-	/* TODO */
-	/* check if num is out of range */
-	if (num < 0 || num > store_size)
-	{
-	    ereport(LOG,
-		    (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		     errmsg("Invalid number of entries in file: %d", num)));
-	    goto data_error;
-	}
+	if (num < 0)
+		goto data_error;
+
+	/*
+	 * If the file contains more entries than the current configuration allows,
+	 * we just load as many as we can fit.
+	 */
+	if (num > store_size)
+		num = store_size;
 
 	for (i = 0; i < num; i++)
 	{

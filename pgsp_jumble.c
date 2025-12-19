@@ -1,4 +1,5 @@
 #include "postgres.h"
+#include "miscadmin.h"
 #include "access/hash.h"
 #include "optimizer/planner.h"
 #include "access/amapi.h"

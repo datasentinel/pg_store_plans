@@ -1186,9 +1186,9 @@ pgsp_planner(Query *parse, const char *query_string, int cursorOptions,
 		}
 		pgsp_jumble_range_table(jstate, result->rtable);	
 
-		char *plan_string = nodeToString(result->planTree);
-		elog(DEBUG3, "pg_store_plans: Plan Tree: %s", plan_string);
-		pfree(plan_string);
+		// char *plan_string = nodeToString(result->planTree);
+		// elog(DEBUG3, "pg_store_plans: Plan Tree: %s", plan_string);
+		// pfree(plan_string);
 		
 		if (jstate->jumble_len > 0)
 		{
@@ -1754,6 +1754,9 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
+	if (pbuffer)
+		free(pbuffer);
+		
 	LWLockRelease(shared_state->lock);
 }
 

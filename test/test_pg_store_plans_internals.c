@@ -55,6 +55,7 @@ static bool test_agg_plans(StringInfo buf);
 static bool test_window_agg_plans(StringInfo buf);
 static bool test_setop_plans(StringInfo buf);
 static bool test_nodes(StringInfo buf);
+static bool test_merge_append_plans(StringInfo buf);
 
 Datum
 test_hash_operations(PG_FUNCTION_ARGS)
@@ -274,6 +275,8 @@ test_jumble_plan_tree(PG_FUNCTION_ARGS)
         success = false;
     if (!test_append_plans(&buf))
         success = false;
+    if (!test_merge_append_plans(&buf))
+        success = false;
     if (!test_nodes(&buf))
         success = false;
 
@@ -344,6 +347,63 @@ static bool test_window_agg_plans(StringInfo buf)
     return (planId1 != planId2 && planId1 == planId3);
 }
 
+
+static bool test_merge_append_plans(StringInfo buf)
+{
+    MergeAppend *ma1, *ma2;
+    SeqScan *scan1, *scan2, *scan3;
+    JumbleState *jstate;
+    uint64 planId1, planId2;
+
+    jstate = pgsp_init_jumble_state();
+
+    /* Test 1: MergeAppend with two child plans, 1 sort col */
+    ma1 = makeNode(MergeAppend);
+    scan1 = makeNode(SeqScan);
+    scan2 = makeNode(SeqScan);
+#if PG_VERSION_NUM >= 150000
+    scan1->scan.scanrelid = 1;
+    scan2->scan.scanrelid = 2;
+#else
+    scan1->scanrelid = 1;
+    scan2->scanrelid = 2;
+#endif
+    ma1->mergeplans = list_make2(scan1, scan2);
+
+    pgsp_jumble_plan_tree(jstate, (Plan *) ma1);
+    planId1 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    /* Test 2: MergeAppend with three child plans (different from ma1) */
+    pfree(jstate->jumble);
+    pfree(jstate);
+    jstate = pgsp_init_jumble_state();
+
+    ma2 = makeNode(MergeAppend);
+    scan1 = makeNode(SeqScan);
+    scan2 = makeNode(SeqScan);
+    scan3 = makeNode(SeqScan);
+#if PG_VERSION_NUM >= 150000
+    scan1->scan.scanrelid = 1;
+    scan2->scan.scanrelid = 2;
+    scan3->scan.scanrelid = 3;
+#else
+    scan1->scanrelid = 1;
+    scan2->scanrelid = 2;
+    scan3->scanrelid = 3;
+#endif
+    ma2->mergeplans = list_make3(scan1, scan2, scan3);
+
+    pgsp_jumble_plan_tree(jstate, (Plan *) ma2);
+    planId2 = DatumGetUInt64(hash_any_extended(jstate->jumble, jstate->jumble_len, 0));
+
+    appendStringInfo(buf, "Test: MergeAppend with different number of children - ");
+    if (planId1 != planId2)
+        appendStringInfo(buf, "PASS\n");
+    else
+        appendStringInfo(buf, "FAIL (both planIds: " UINT64_FORMAT ")\n", planId1);
+
+    return (planId1 != planId2);
+}
 static bool test_setop_plans(StringInfo buf)
 {
     SetOp *setop1, *setop2, *setop3, *setop4;

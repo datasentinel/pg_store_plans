@@ -90,7 +90,7 @@ CREATE FUNCTION pg_store_plans(
     OUT last_call timestamptz
 )
 RETURNS SETOF record
-AS 'MODULE_PATHNAME', 'pg_store_plans_1_9'
+AS 'MODULE_PATHNAME', 'pg_store_plans_2_0'
 LANGUAGE C
 VOLATILE PARALLEL SAFE;
 

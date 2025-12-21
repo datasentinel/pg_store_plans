@@ -1,3 +1,11 @@
+/*-------------------------------------------------------------------------
+ *
+ * pgsp_jumble.h: hash table implementation for plan ID caching.
+ *
+ * Copyright (c) 2026, DATASENTINEL
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #if PG_VERSION_NUM >= 160000

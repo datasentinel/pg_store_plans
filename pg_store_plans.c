@@ -24,6 +24,7 @@
  *
  * Copyright (c) 2008-2025, PostgreSQL Global Development Group
  * Copyright (c) 2012-2025, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+ * Copyright (c) 2026, DATASENTINEL
  *
  * IDENTIFICATION
  *	  pg_store_plans/pg_store_plans.c
@@ -101,7 +102,8 @@ typedef enum pgspVersion
 	PGSP_V1_6,
 	PGSP_V1_7,
 	/* PGSP_V1_7 interface is used for v1.8 */
-	PGSP_V1_9
+	PGSP_V1_9,
+    /* PGSP_V2_0 interface is used for v2.0 */
 } pgspVersion;
 
 /*
@@ -314,6 +316,7 @@ PG_FUNCTION_INFO_V1(pg_store_plans);
 PG_FUNCTION_INFO_V1(pg_store_plans_1_6);
 PG_FUNCTION_INFO_V1(pg_store_plans_1_7);
 PG_FUNCTION_INFO_V1(pg_store_plans_1_9);
+PG_FUNCTION_INFO_V1(pg_store_plans_2_0);
 PG_FUNCTION_INFO_V1(pg_store_plans_shorten);
 PG_FUNCTION_INFO_V1(pg_store_plans_normalize);
 PG_FUNCTION_INFO_V1(pg_store_plans_jsonplan);
@@ -327,6 +330,7 @@ PG_FUNCTION_INFO_V1(pg_store_plans_info);
 #if PG_VERSION_NUM >= 150000
 static shmem_request_hook_type prev_shmem_request_hook = NULL;
 #endif
+
 
 static void pgsp_shmem_request(void);
 static void pgsp_shmem_startup(void);
@@ -1471,6 +1475,14 @@ pg_store_plans_reset(PG_FUNCTION_ARGS)
 /*
  * Retrieve statement statistics.
  */
+Datum
+pg_store_plans_2_0(PG_FUNCTION_ARGS)
+{
+	pg_store_plans_internal(fcinfo, PGSP_V1_9);
+
+	return (Datum) 0;
+}
+
 Datum
 pg_store_plans_1_9(PG_FUNCTION_ARGS)
 {

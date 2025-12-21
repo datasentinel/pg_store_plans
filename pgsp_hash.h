@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------
+ *
+ * pgsp_hash.h: hash table implementation for plan ID caching.
+ *
+ * Copyright (c) 2026, DATASENTINEL
+ *
+ *-------------------------------------------------------------------------
+ */
+
 #include "postgres.h"
 #include "nodes/plannodes.h"
 #include "utils/hsearch.h"

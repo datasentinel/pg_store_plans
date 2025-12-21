@@ -10,6 +10,9 @@
  /soft/projects/postgres/build/include/server/utils/elog.h \
  /soft/projects/postgres/build/include/server/utils/errcodes.h \
  /soft/projects/postgres/build/include/server/utils/palloc.h \
+ /soft/projects/postgres/build/include/server/miscadmin.h \
+ /soft/projects/postgres/build/include/server/datatype/timestamp.h \
+ /soft/projects/postgres/build/include/server/pgtime.h \
  /soft/projects/postgres/build/include/server/access/hash.h \
  /soft/projects/postgres/build/include/server/access/amapi.h \
  /soft/projects/postgres/build/include/server/access/genam.h \
@@ -171,6 +174,9 @@
 /soft/projects/postgres/build/include/server/utils/elog.h:
 /soft/projects/postgres/build/include/server/utils/errcodes.h:
 /soft/projects/postgres/build/include/server/utils/palloc.h:
+/soft/projects/postgres/build/include/server/miscadmin.h:
+/soft/projects/postgres/build/include/server/datatype/timestamp.h:
+/soft/projects/postgres/build/include/server/pgtime.h:
 /soft/projects/postgres/build/include/server/access/hash.h:
 /soft/projects/postgres/build/include/server/access/amapi.h:
 /soft/projects/postgres/build/include/server/access/genam.h:

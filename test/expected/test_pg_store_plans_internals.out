@@ -70,6 +70,7 @@ SELECT test_jumble_plan_tree();
  Test: Different seq scan relids - PASS                     +
  Test: Append with different number of children - PASS      +
  Test: Append with same children but different order - PASS +
+ Test: MergeAppend with different number of children - PASS +
  Test: nodes added - PASS                                   +
                                                             +
  All tests PASSED                                           +

@@ -130,7 +130,7 @@ pgsp_jumble_range_table(JumbleState *jstate, List *rtable)
 				APP_JUMB(expr->relid);
 				break;
 			case RTE_CTE:
-				APP_JUMB(expr->ctename);
+			    AppendJumble(jstate, (const unsigned char *) expr->ctename, strlen(expr->ctename) +1);
 				break;
 			default:
 				break;
@@ -241,7 +241,6 @@ pgsp_jumble_plan_tree(JumbleState *jstate, Plan *plan)
 	
 	/* Jumble the node type first */
 	APP_JUMB(nodeTag(plan));
-	// elog(DEBUG3, "pg_store_plans: nodeTag(node) = %d", nodeTag(plan));
 
 	switch (nodeTag(plan))
 	{

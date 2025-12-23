@@ -383,6 +383,123 @@ select pg_store_plans_reset();
  
 
 \o /dev/null
+with recursive l as (
+select pid, locktype, mode, granted,
+    row(locktype,database,relation,page,tuple,virtualxid,transactionid,classid,objid,objsubid) obj
+from pg_locks
+), pairs AS (
+select w.pid waiter, l.pid locker, l.obj, l.mode
+from l w
+join l on l.obj is not distinct from w.obj and l.locktype=w.locktype and not l.pid=w.pid and l.granted
+where not w.granted
+), tree as (
+select l.locker pid, l.locker root, null::record obj, null AS mode, 0 lvl, locker::text path, array_agg(l.locker) over () all_pids
+from ( select distinct locker from pairs l where not exists (select 1 from pairs where waiter=l.locker) ) l
+union all
+select w.waiter pid, tree.root, w.obj, w.mode, tree.lvl+1, tree.path||'.'||w.waiter, all_pids || array_agg(w.waiter) over ()
+from tree join pairs w on tree.pid=w.locker and not w.waiter = ANY ( all_pids )
+)
+select round(extract(epoch from age(clock_timestamp(), a.query_start))) AS query_age,
+        state,
+        coalesce(round(extract(epoch from age(clock_timestamp(), xact_start))),0) AS ts_age,
+        a.datname as database,
+        tree.pid,
+        a.usename as user,
+        coalesce(case when a.client_hostname is null and a.client_addr is null then ''
+            when a.client_hostname is null then cast(a.client_addr as varchar)
+            else a.client_hostname end, '') as client_hostname,
+        lvl as level,
+        (select count(*) from tree p where p.path ~ ('^'||tree.path) and not p.path=tree.path) blocked,
+        case when query_id is null then '0' else ltrim(to_char(query_id,'9999999999999999999999')) end as queryid,
+        query,
+        a.query_start,
+        a.xact_start,
+        case when a.application_name = 'PoWA collector' then 'powa backend' else a.backend_type end as backend_type,
+        a.state_change,
+        a.wait_event,
+        a.wait_event_type,
+        a.application_name,
+        a.backend_start
+from tree
+join pg_stat_activity a using (pid)
+order by path;
+\g
+\g
+\o
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+     1 | Result
+     3 | Result                                                                                 +
+       |   CTE l                                                                                +
+       |     ->  Function Scan on pg_lock_status l                                              +
+       |   CTE pairs                                                                            +
+       |     ->  Merge Join                                                                     +
+       |           Merge Cond: (w.locktype = l_1.locktype)                                      +
+       |           Join Filter: ((NOT (l_1.obj IS DISTINCT FROM w.obj)) AND (l_1.pid <> w.pid)) +
+       |         ->  Sort                                                                       +
+       |               Sort Key: w.locktype                                                     +
+       |               ->  CTE Scan on l w                                                      +
+       |                     Filter: (NOT granted)                                              +
+       |         ->  Sort                                                                       +
+       |               Sort Key: l_1.locktype                                                   +
+       |               ->  CTE Scan on l l_1                                                    +
+       |                     Filter: granted                                                    +
+       |   CTE tree                                                                             +
+       |     ->  Recursive Union                                                                +
+       |         ->  WindowAgg                                                                  +
+       |               Window: w1 AS ()                                                         +
+       |               ->  Unique                                                               +
+       |                     ->  Merge Anti Join                                                +
+       |                           Merge Cond: (l_2.locker = pairs.waiter)                      +
+       |                           ->  Sort                                                     +
+       |                                 Sort Key: l_2.locker                                   +
+       |                                 ->  CTE Scan on pairs l_2                              +
+       |                           ->  Sort                                                     +
+       |                                 Sort Key: pairs.waiter                                 +
+       |                                 ->  CTE Scan on pairs                                  +
+       |         ->  WindowAgg                                                                  +
+       |               Window: w1 AS ()                                                         +
+       |               ->  Merge Join                                                           +
+       |                     Merge Cond: (tree_1.pid = w_1.locker)                              +
+       |                     Join Filter: (w_1.waiter <> ALL (tree_1.all_pids))                 +
+       |                     ->  Sort                                                           +
+       |                           Sort Key: tree_1.pid                                         +
+       |                           ->  WorkTable Scan on tree tree_1                            +
+       |                     ->  Sort                                                           +
+       |                           Sort Key: w_1.locker                                         +
+       |                           ->  CTE Scan on pairs w_1                                    +
+       |   ->  Sort                                                                             +
+       |         Sort Key: tree.path                                                            +
+       |         ->  Merge Left Join                                                            +
+       |               Merge Cond: (s.usesysid = u.oid)                                         +
+       |               ->  Sort                                                                 +
+       |                     Sort Key: s.usesysid                                               +
+       |                     ->  Merge Left Join                                                +
+       |                           Merge Cond: (s.datid = d.oid)                                +
+       |                           ->  Sort                                                     +
+       |                                 Sort Key: s.datid                                      +
+       |                                 ->  Merge Join                                         +
+       |                                       Merge Cond: (tree.pid = s.pid)                   +
+       |                                       ->  Sort                                         +
+       |                                             Sort Key: tree.pid                         +
+       |                                             ->  CTE Scan on tree                       +
+       |                                       ->  Sort                                         +
+       |                                             Sort Key: s.pid                            +
+       |                                             ->  Function Scan on pg_stat_get_activity s+
+       |                           ->  Sort                                                     +
+       |                                 Sort Key: d.oid                                        +
+       |                                 ->  Seq Scan on pg_database d                          +
+       |               ->  Sort                                                                 +
+       |                     Sort Key: u.oid                                                    +
+       |                     ->  Seq Scan on pg_authid u                                        +
+       |   SubPlan 4                                                                            +
+       |     ->  Aggregate                                                                      +
+       |         ->  CTE Scan on tree p                                                         +
+       |               Filter: ((path <> tree.path) AND (path ~ ('^'::text || tree.path)))
+
+select pg_store_plans_reset();
+ 
+
+\o /dev/null
 -- drop TABLE addresses;
 -- drop TABLE payments;
 -- drop TABLE order_details;

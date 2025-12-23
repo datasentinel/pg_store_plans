@@ -305,6 +305,55 @@ select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg
 select pg_store_plans_reset();
 \o /dev/null
 
+with recursive l as (
+select pid, locktype, mode, granted,
+    row(locktype,database,relation,page,tuple,virtualxid,transactionid,classid,objid,objsubid) obj
+from pg_locks
+), pairs AS (
+select w.pid waiter, l.pid locker, l.obj, l.mode
+from l w
+join l on l.obj is not distinct from w.obj and l.locktype=w.locktype and not l.pid=w.pid and l.granted
+where not w.granted
+), tree as (
+select l.locker pid, l.locker root, null::record obj, null AS mode, 0 lvl, locker::text path, array_agg(l.locker) over () all_pids
+from ( select distinct locker from pairs l where not exists (select 1 from pairs where waiter=l.locker) ) l
+union all
+select w.waiter pid, tree.root, w.obj, w.mode, tree.lvl+1, tree.path||'.'||w.waiter, all_pids || array_agg(w.waiter) over ()
+from tree join pairs w on tree.pid=w.locker and not w.waiter = ANY ( all_pids )
+)
+select round(extract(epoch from age(clock_timestamp(), a.query_start))) AS query_age,
+        state,
+        coalesce(round(extract(epoch from age(clock_timestamp(), xact_start))),0) AS ts_age,
+        a.datname as database,
+        tree.pid,
+        a.usename as user,
+        coalesce(case when a.client_hostname is null and a.client_addr is null then ''
+            when a.client_hostname is null then cast(a.client_addr as varchar)
+            else a.client_hostname end, '') as client_hostname,
+        lvl as level,
+        (select count(*) from tree p where p.path ~ ('^'||tree.path) and not p.path=tree.path) blocked,
+        case when query_id is null then '0' else ltrim(to_char(query_id,'9999999999999999999999')) end as queryid,
+        query,
+        a.query_start,
+        a.xact_start,
+        case when a.application_name = 'PoWA collector' then 'powa backend' else a.backend_type end as backend_type,
+        a.state_change,
+        a.wait_event,
+        a.wait_event_type,
+        a.application_name,
+        a.backend_start
+from tree
+join pg_stat_activity a using (pid)
+order by path;
+
+\g
+\g
+\o
+
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select pg_store_plans_reset();
+\o /dev/null
+
 -- drop TABLE addresses;
 -- drop TABLE payments;
 -- drop TABLE order_details;

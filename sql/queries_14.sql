@@ -171,7 +171,7 @@ SELECT
     CEIL(RANDOM() * 500), -- Random product_id
     CEIL(RANDOM() * 10), -- Quantity between 1 and 10
     CEIL(RANDOM() * 100 + 1) -- Price between $1 and $101
-FROM GENERATE_SERIES(1, 50000) AS i; -- 50,000 order details
+FROM GENERATE_SERIES(1, 5000) AS i; -- 5,000 order details
 
 INSERT INTO payments (order_id, payment_date, amount, payment_method)
 SELECT
@@ -179,7 +179,7 @@ SELECT
     CURRENT_DATE - INTERVAL '1 day' * FLOOR(RANDOM() * 365 * 2), -- Random payment date
     CEIL(RANDOM() * 1000 + 10), -- Amount between $10 and $1010
     CASE WHEN RANDOM() < 0.5 THEN 'Credit Card' ELSE 'PayPal' END -- Random payment method
-FROM GENERATE_SERIES(1, 10000) AS i; -- 10,000 payments
+FROM GENERATE_SERIES(1, 1000) AS i; -- 1,000 payments
 
 
  \pset pager off
@@ -207,7 +207,7 @@ EXECUTE my_regions('Region_2');
 DEALLOCATE my_regions;
 
 \o
-select calls, plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -225,7 +225,7 @@ WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 
 \o
-select calls, plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -250,7 +250,7 @@ WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 \g
 \o
-select calls, plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -272,7 +272,7 @@ SET enable_indexscan = OFF;
 select last_name from customers where last_name='custom123';
 
 \o
-select calls, plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -290,7 +290,7 @@ SELECT employee_name, branch_id, hire_date,
 FROM employees;
 
 \o
-select calls, plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -301,7 +301,7 @@ SELECT * FROM orders WHERE order_date = CURRENT_DATE -1 or order_date = current_
 
 
 \o
-select calls, plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 

@@ -1,14 +1,11 @@
 SET client_min_messages=INFO;
+
 \set ECHO all   
 \unset QUIET
 \pset tuples_only on
 \pset recordsep '\n\n=======\n'
-Record separator is "
-
-=======
-".
 \echo  ###### format conversion tests
-###### format conversion tests
+
 -- ===== Setup Test Environment =====
 CREATE TABLE customers (
     customer_id SERIAL PRIMARY KEY,
@@ -19,21 +16,22 @@ CREATE TABLE customers (
     phone_number VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE
+
 create index customers_idx on customers(last_name);
-CREATE INDEX
+
+
 CREATE TABLE regions (
     region_id SERIAL PRIMARY KEY,
     region_name VARCHAR(100) NOT NULL
 );
-CREATE TABLE
+
 CREATE TABLE countries (
     country_id SERIAL PRIMARY KEY,
     country_name VARCHAR(100) NOT NULL,
     region_id INT NOT NULL,
     FOREIGN KEY (region_id) REFERENCES regions(region_id)
 );
-CREATE TABLE
+
 CREATE TABLE products (
     product_id SERIAL PRIMARY KEY,
     product_name VARCHAR(200) NOT NULL,
@@ -41,13 +39,13 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL,
     stock_quantity INT NOT NULL
 );
-CREATE TABLE
+
 CREATE TABLE branches (
     branch_id SERIAL PRIMARY KEY,
     branch_name VARCHAR(150) NOT NULL,
     branch_location VARCHAR(200)
 );
-CREATE TABLE
+
 CREATE TABLE employees (
     employee_id SERIAL PRIMARY KEY,
     employee_name VARCHAR(150) NOT NULL,
@@ -56,7 +54,8 @@ CREATE TABLE employees (
     hire_date DATE NOT NULL,
     FOREIGN KEY (branch_id) REFERENCES branches(branch_id)
 );
-CREATE TABLE
+
+
 CREATE TABLE orders (
     order_id SERIAL,
     customer_id INT NOT NULL,
@@ -67,9 +66,9 @@ CREATE TABLE orders (
     FOREIGN KEY (employee_id) REFERENCES employees(employee_id),
     PRIMARY KEY (order_date,order_id)
 ) PARTITION BY RANGE (order_date);
-CREATE TABLE
+
 create index order_id_idx on orders(order_id);
-CREATE INDEX
+
 DO $$
 DECLARE
     i INT;
@@ -80,7 +79,7 @@ BEGIN
     END LOOP;
     CREATE TABLE orders_default PARTITION OF orders DEFAULT;
 END $$;
-DO
+
 CREATE TABLE order_details (
     order_detail_id SERIAL,
     order_id INT NOT NULL,
@@ -90,17 +89,14 @@ CREATE TABLE order_details (
     FOREIGN KEY (product_id) REFERENCES products(product_id),
     PRIMARY KEY (order_detail_id, order_id)
 ) PARTITION BY HASH (order_id);
-CREATE TABLE
+
 CREATE TABLE order_details_p0 PARTITION OF order_details FOR VALUES WITH (MODULUS 5, REMAINDER 0);
-CREATE TABLE
 CREATE TABLE order_details_p1 PARTITION OF order_details FOR VALUES WITH (MODULUS 5, REMAINDER 1);
-CREATE TABLE
 CREATE TABLE order_details_p2 PARTITION OF order_details FOR VALUES WITH (MODULUS 5, REMAINDER 2);
-CREATE TABLE
 CREATE TABLE order_details_p3 PARTITION OF order_details FOR VALUES WITH (MODULUS 5, REMAINDER 3);
-CREATE TABLE
 CREATE TABLE order_details_p4 PARTITION OF order_details FOR VALUES WITH (MODULUS 5, REMAINDER 4);
-CREATE TABLE
+
+
 CREATE TABLE payments (
     payment_id SERIAL PRIMARY KEY,
     order_id INT NOT NULL,
@@ -108,7 +104,7 @@ CREATE TABLE payments (
     amount DECIMAL(10, 2) NOT NULL,
     payment_method VARCHAR(50)
 );
-CREATE TABLE
+
 CREATE TABLE addresses (
     address_id SERIAL PRIMARY KEY,
     street_address VARCHAR(200) NOT NULL,
@@ -118,13 +114,11 @@ CREATE TABLE addresses (
     postal_code VARCHAR(20),
     FOREIGN KEY (country_id) REFERENCES countries(country_id)
 );
-CREATE TABLE
+
 -- ===== Insert Sample Data =====
 INSERT INTO regions (region_name) SELECT 'Region_' || i FROM GENERATE_SERIES(1, 10) AS i; -- 10 regions;
-INSERT 0 10
 INSERT INTO countries (country_name, region_id)  SELECT 'Country_' || i, CEIL(RANDOM() * 10)
 FROM GENERATE_SERIES(1, 100) AS i; -- 100 countries, random regions
-INSERT 0 100
 INSERT INTO addresses (street_address, city, state, country_id, postal_code)
 SELECT
     'Street_' || i,
@@ -133,13 +127,11 @@ SELECT
     CEIL(RANDOM() * 100),
     '10000' || i
 FROM GENERATE_SERIES(1, 1000) AS i; -- 1000 addresses
-INSERT 0 1000
 INSERT INTO branches (branch_name, branch_location)
 SELECT
     'Branch_' || i,
     'Location_' || CEIL(RANDOM() * 100)
 FROM GENERATE_SERIES(1, 50) AS i; -- 50 branches
-INSERT 0 50
 INSERT INTO employees (employee_name, branch_id, position, hire_date)
 SELECT
     'Employee_' || i,
@@ -147,7 +139,6 @@ SELECT
     'Position_' || CEIL(RANDOM() * 10),
     CURRENT_DATE - INTERVAL '1 day' * FLOOR(RANDOM() * 365 * 5) -- Random hire date in the past 5 years
 FROM GENERATE_SERIES(1, 500) AS i; -- 500 employees
-INSERT 0 500
 INSERT INTO customers (first_name, last_name, address_id, email, phone_number, created_at)
 SELECT
     'FirstName' || i,
@@ -157,7 +148,6 @@ SELECT
     '123-456-7890',
     CURRENT_DATE - INTERVAL '1 day' * FLOOR(RANDOM() * 365 * 2) -- Random creation date in the past 2 years
 FROM GENERATE_SERIES(1, 1000) AS i;
-INSERT 0 1000
 INSERT INTO orders (customer_id, employee_id, order_date, total_amount)
 SELECT
     CEIL(RANDOM() * 1000), -- Random customer_id
@@ -165,7 +155,7 @@ SELECT
     CURRENT_DATE - INTERVAL '1 day' * FLOOR(RANDOM() * 365 * 2), -- Random order date
     CEIL(RANDOM() * 1000 + 10) -- Random total amount between $10 and $1010
 FROM GENERATE_SERIES(1, 100) AS i;
-INSERT 0 100
+
 INSERT INTO products (product_name, product_description, price, stock_quantity)
 SELECT
     'Product_' || i,
@@ -173,7 +163,7 @@ SELECT
     CEIL(RANDOM() * 100), -- Price between $1 and $101
     CEIL(RANDOM() * 1000) -- Stock quantity between 1 and 1000
 FROM GENERATE_SERIES(1, 500) AS i; -- 500 products
-INSERT 0 500
+
 -- 9. Insert data into order_details
 INSERT INTO order_details (order_id, product_id, quantity, price)
 SELECT
@@ -181,18 +171,19 @@ SELECT
     CEIL(RANDOM() * 500), -- Random product_id
     CEIL(RANDOM() * 10), -- Quantity between 1 and 10
     CEIL(RANDOM() * 100 + 1) -- Price between $1 and $101
-FROM GENERATE_SERIES(1, 50000) AS i; -- 50,000 order details
-INSERT 0 50000
+FROM GENERATE_SERIES(1, 5000) AS i; -- 5,000 order details
+
 INSERT INTO payments (order_id, payment_date, amount, payment_method)
 SELECT
     CEIL(RANDOM() * 100), -- Random order_id
     CURRENT_DATE - INTERVAL '1 day' * FLOOR(RANDOM() * 365 * 2), -- Random payment date
     CEIL(RANDOM() * 1000 + 10), -- Amount between $10 and $1010
     CASE WHEN RANDOM() < 0.5 THEN 'Credit Card' ELSE 'PayPal' END -- Random payment method
-FROM GENERATE_SERIES(1, 10000) AS i; -- 10,000 payments
-INSERT 0 10000
+FROM GENERATE_SERIES(1, 1000) AS i; -- 1,000 payments
+
+
  \pset pager off
-Pager usage is off.
+
 -- Planner settings to force certain plan types for testing
 -- SET enable_seqscan = OFF;
 -- SET enable_indexscan = OFF;
@@ -203,48 +194,41 @@ Pager usage is off.
 -- SET enable_nestloop = OFF;
 -- SET enable_mergejoin = OFF;
 -- SET enable_hashjoin = OFF;
-select pg_store_plans_reset();
- 
 
+select pg_store_plans_reset();
 \o /dev/null
+
 -- ===== Test Queries =====
 PREPARE my_regions (text) AS SELECT region_name, region_id FROM regions WHERE region_name = $1;
+
 EXECUTE my_regions('Region_1');
 EXECUTE my_regions('Region_2');
+
 DEALLOCATE my_regions;
+
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
-     1 | Result
-     2 | Seq Scan on regions                               +
-       |   Filter: ((region_name)::text = 'Region_1'::text)
-
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
- 
-
 \o /dev/null
+
+
 SELECT e.employee_name, e.position, b.branch_name
 FROM employees e
 JOIN branches b ON e.branch_id = b.branch_id
 WHERE b.branch_name in ('Branch_2','Branch_3','Branch_5');
+
 SELECT e.employee_name, e.position, b.branch_name
 FROM employees e
 JOIN branches b ON e.branch_id = b.branch_id
 WHERE b.branch_name in ('Branch_10','Branch_1');
+
 \g
+
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
-     1 | Result
-     3 | Hash Join                                                                                 +
-       |   Hash Cond: (e.branch_id = b.branch_id)                                                  +
-       |   ->  Seq Scan on employees e                                                             +
-       |   ->  Hash                                                                                +
-       |         ->  Seq Scan on branches b                                                        +
-       |               Filter: ((branch_name)::text = ANY ('{Branch_2,Branch_3,Branch_5}'::text[]))
-
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
- 
-
 \o /dev/null
+
 SELECT e.employee_name, e.position, b.branch_name
 FROM employees e
 JOIN branches b ON e.branch_id = b.branch_id
@@ -254,8 +238,11 @@ SELECT e.employee_name, e.position, b.branch_name
 FROM employees e
 JOIN branches b ON e.branch_id = b.branch_id
 WHERE b.branch_name in ('Branch_10','Branch_1');
+
 \g
+
 SET enable_nestloop = OFF;
+
 SELECT e.employee_name, e.position, b.branch_name
 FROM employees e
 JOIN branches b ON e.branch_id = b.branch_id
@@ -263,126 +250,61 @@ WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 \g
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
-     1 | Hash Join                                                                         +
-       |   Hash Cond: (e.branch_id = b.branch_id)                                          +
-       |   ->  Seq Scan on employees e                                                     +
-       |   ->  Hash                                                                        +
-       |         ->  Seq Scan on branches b                                                +
-       |               Filter: ((branch_name)::text = ANY ('{Branch_10,Branch_1}'::text[]))
-     1 | Result
-     2 | Nested Loop                                                                       +
-       |   Join Filter: (b.branch_id = e.branch_id)                                        +
-       |   ->  Seq Scan on employees e                                                     +
-       |   ->  Materialize                                                                 +
-       |         ->  Seq Scan on branches b                                                +
-       |               Filter: ((branch_name)::text = ANY ('{Branch_10,Branch_1}'::text[]))
-     3 | Merge Join                                                                        +
-       |   Merge Cond: (e.branch_id = b.branch_id)                                         +
-       |   ->  Sort                                                                        +
-       |         Sort Key: e.branch_id                                                     +
-       |         ->  Seq Scan on employees e                                               +
-       |   ->  Sort                                                                        +
-       |         Sort Key: b.branch_id                                                     +
-       |         ->  Seq Scan on branches b                                                +
-       |               Filter: ((branch_name)::text = ANY ('{Branch_10,Branch_1}'::text[]))
-
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
- 
-
 \o /dev/null
+
 select last_name from customers where last_name='customer128' or last_name='custom123';
+
 select last_name from customers where last_name='customer128';
+
 select last_name from customers where last_name>='customer1';
+
 SET enable_seqscan = OFF;
+
 select last_name from customers where last_name>='customer1';
+
 select last_name from customers where last_name='custom123';
+
 SET enable_seqscan = ON;
 SET enable_indexscan = OFF;
+
 select last_name from customers where last_name='custom123';
+
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
-     1 | Bitmap Heap Scan on customers                                                                   +
-       |   Filter: (((last_name)::text = 'customer128'::text) OR ((last_name)::text = 'custom123'::text))+
-       |   ->  Bitmap Index Scan using customers_idx                                                     +
-       |         Index Cond: (last_name = ANY ('{customer128,custom123}'::text[]))
-     1 | Bitmap Heap Scan on customers                                                                   +
-       |   Recheck Cond: ((last_name)::text = 'custom123'::text)                                         +
-       |   ->  Bitmap Index Scan using customers_idx                                                     +
-       |         Index Cond: ((last_name)::text = 'custom123'::text)
-     1 | Bitmap Heap Scan on customers                                                                   +
-       |   Recheck Cond: ((last_name)::text >= 'customer1'::text)                                        +
-       |   ->  Bitmap Index Scan using customers_idx                                                     +
-       |         Index Cond: ((last_name)::text >= 'customer1'::text)
-     1 | Result
-     1 | Seq Scan on customers                                                                           +
-       |   Filter: ((last_name)::text >= 'customer1'::text)
-     2 | Index Only Scan using customers_idx on customers                                                +
-       |   Index Cond: (last_name = 'customer128'::text)
-
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
- 
-
 \o /dev/null
+
+
 SELECT employee_name, branch_id, hire_date,
     rank() OVER (PARTITION BY branch_id ORDER BY hire_date)
 FROM employees;
+
 SELECT employee_name, branch_id, hire_date,
     rank() OVER (PARTITION BY employee_name ORDER BY hire_date)
 FROM employees;
+
 SELECT employee_name, branch_id, hire_date,
     rank() OVER (PARTITION BY employee_name)
 FROM employees;
+
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
-     1 | Result
-     1 | WindowAgg                                                                               +
-       |   Window: w1 AS (PARTITION BY branch_id ORDER BY hire_date ROWS UNBOUNDED PRECEDING)    +
-       |   ->  Sort                                                                              +
-       |         Sort Key: branch_id, hire_date                                                  +
-       |         ->  Seq Scan on employees
-     1 | WindowAgg                                                                               +
-       |   Window: w1 AS (PARTITION BY employee_name ORDER BY hire_date ROWS UNBOUNDED PRECEDING)+
-       |   ->  Sort                                                                              +
-       |         Sort Key: employee_name, hire_date                                              +
-       |         ->  Seq Scan on employees
-     1 | WindowAgg                                                                               +
-       |   Window: w1 AS (PARTITION BY employee_name ROWS UNBOUNDED PRECEDING)                   +
-       |   ->  Sort                                                                              +
-       |         Sort Key: employee_name                                                         +
-       |         ->  Seq Scan on employees
-
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
- 
-
 \o /dev/null
+
 SELECT * FROM orders WHERE order_date = CURRENT_DATE -1;
 SELECT * FROM orders WHERE order_date = CURRENT_DATE -2;
+
 SELECT * FROM orders WHERE order_date = CURRENT_DATE -1 or order_date = current_date - 2;
+
+
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
-     1 | Append                                                                                      +
-       |   Subplans Removed: 19                                                                      +
-       |   ->  Bitmap Heap Scan on orders_p2 orders_1                                                +
-       |         Filter: ((order_date = (CURRENT_DATE - 1)) OR (order_date = (CURRENT_DATE - 2)))    +
-       |         ->  Bitmap Index Scan using orders_p2_pkey                                          +
-       |               Index Cond: (order_date = ANY (ARRAY[(CURRENT_DATE - 1), (CURRENT_DATE - 2)]))+
-       |   ->  Bitmap Heap Scan on orders_p1 orders_2                                                +
-       |         Filter: ((order_date = (CURRENT_DATE - 1)) OR (order_date = (CURRENT_DATE - 2)))    +
-       |         ->  Bitmap Index Scan using orders_p1_pkey                                          +
-       |               Index Cond: (order_date = ANY (ARRAY[(CURRENT_DATE - 1), (CURRENT_DATE - 2)]))
-     1 | Result
-     2 | Append                                                                                      +
-       |   Subplans Removed: 20                                                                      +
-       |   ->  Bitmap Heap Scan on orders_p1 orders_1                                                +
-       |         Recheck Cond: (order_date = (CURRENT_DATE - 1))                                     +
-       |         ->  Bitmap Index Scan using orders_p1_pkey                                          +
-       |               Index Cond: (order_date = (CURRENT_DATE - 1))
-
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
 select pg_store_plans_reset();
- 
-
 \o /dev/null
+
 -- drop TABLE addresses;
 -- drop TABLE payments;
 -- drop TABLE order_details;

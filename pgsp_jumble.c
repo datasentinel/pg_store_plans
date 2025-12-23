@@ -460,7 +460,11 @@ pgsp_jumble_plan_tree(JumbleState *jstate, Plan *plan)
 				APP_JUMB(setop->strategy);
 				APP_JUMB(setop->numCols);
 				for (int i = 0; i < setop->numCols; i++)
-					APP_JUMB(setop->dupColIdx[i]);
+				    #if PG_VERSION_NUM >= 180000
+						APP_JUMB(setop->cmpColIdx[i]);
+					#else
+						APP_JUMB(setop->dupColIdx[i]);
+					#endif
 			}
 			break;
 		default:

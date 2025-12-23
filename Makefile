@@ -12,7 +12,7 @@ PG_VERSION := $(shell pg_config --version | sed "s/^PostgreSQL //" | sed "s/\.[0
 
 DATA = pg_store_plans--2.0.sql
 
-REGRESS = convert store queries
+REGRESS = convert store queries_$(PG_VERSION)
 REGRESS_OPTS = --temp-config=regress.conf
 
 PG_CONFIG = pg_config

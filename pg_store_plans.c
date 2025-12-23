@@ -40,6 +40,10 @@
 
 #include "catalog/pg_authid.h"
 #include "commands/explain.h"
+#if PG_VERSION_NUM >= 180000
+#include "commands/explain_format.h"
+#include "commands/explain_state.h"
+#endif
 #include "access/hash.h"
 #include "access/parallel.h"
 #include "executor/instrument.h"
@@ -79,7 +83,7 @@ static const uint32 PGSP_PG_MAJOR_VERSION = PG_VERSION_NUM / 100;
 
 /* This constant defines the magic number in the stats file header */
 static const uint32 PGSP_FILE_HEADER = 0x20221214;
-static int max_plan_len = 5000;
+static int	max_plan_len = 5000;
 
 /* XXX: Should USAGE_EXEC reflect execution time and/or buffer usage? */
 #define USAGE_EXEC(duration)	(1.0)
@@ -88,10 +92,11 @@ static int max_plan_len = 5000;
 #define ASSUMED_LENGTH_INIT		1024	/* initial assumed mean query length */
 #define USAGE_DECREASE_FACTOR	(0.99)	/* decreased every entry_dealloc */
 #define STICKY_DECREASE_FACTOR	(0.50)	/* factor for sticky entries */
-#define USAGE_DEALLOC_PERCENT	5		/* free this % of entries at once */
+#define USAGE_DEALLOC_PERCENT	5	/* free this % of entries at once */
 
 typedef uint64 queryid_t;
 #define PGSP_NO_QUERYID		UINT64CONST(0)
+#define PGSP_NO_PLANID		UINT64CONST(0)
 
 /*
  * Extension version number, for supporting older extension versions' objects
@@ -103,8 +108,8 @@ typedef enum pgspVersion
 	PGSP_V1_7,
 	/* PGSP_V1_7 interface is used for v1.8 */
 	PGSP_V1_9,
-    /* PGSP_V2_0 interface is used for v2.0 */
-} pgspVersion;
+	/* PGSP_V2_0 interface is used for v2.0 */
+}			pgspVersion;
 
 /*
  * Hashtable key that defines the identity of a hashtable entry.  We separate
@@ -120,43 +125,44 @@ typedef struct pgspHashKey
 	Oid			dbid;			/* database OID */
 	queryid_t	queryid;		/* query identifier */
 	uint64		planid;			/* plan identifier */
-} pgspHashKey;
+}			pgspHashKey;
 
 /*
  * The actual stats counters kept within pgspEntry.
  */
 typedef struct Counters
 {
-	int64		calls;				/* # of times executed */
-	double		total_time;			/* total execution time, in msec */
-	double		min_time;			/* minimum execution time in msec */
-	double		max_time;			/* maximum execution time in msec */
-	double		mean_time;			/* mean execution time in msec */
+	int64		calls;			/* # of times executed */
+	double		total_time;		/* total execution time, in msec */
+	double		min_time;		/* minimum execution time in msec */
+	double		max_time;		/* maximum execution time in msec */
+	double		mean_time;		/* mean execution time in msec */
 	double		sum_var_time;	/* sum of variances in execution time in msec */
-	int64		rows;				/* total # of retrieved or affected rows */
+	int64		rows;			/* total # of retrieved or affected rows */
 	int64		shared_blks_hit;	/* # of shared buffer hits */
 	int64		shared_blks_read;	/* # of shared disk blocks read */
-	int64		shared_blks_dirtied;/* # of shared disk blocks dirtied */
-	int64		shared_blks_written;/* # of shared disk blocks written */
-	int64		local_blks_hit; 	/* # of local buffer hits */
+	int64		shared_blks_dirtied;	/* # of shared disk blocks dirtied */
+	int64		shared_blks_written;	/* # of shared disk blocks written */
+	int64		local_blks_hit; /* # of local buffer hits */
 	int64		local_blks_read;	/* # of local disk blocks read */
-	int64		local_blks_dirtied;	/* # of local disk blocks dirtied */
-	int64		local_blks_written;	/* # of local disk blocks written */
-	int64		temp_blks_read; 	/* # of temp blocks read */
+	int64		local_blks_dirtied; /* # of local disk blocks dirtied */
+	int64		local_blks_written; /* # of local disk blocks written */
+	int64		temp_blks_read; /* # of temp blocks read */
 	int64		temp_blks_written;	/* # of temp blocks written */
-	double		shared_blk_read_time;/* time spent reading, in msec */
-	double		shared_blk_write_time;/* time spent writing, in msec */
+	double		shared_blk_read_time;	/* time spent reading, in msec */
+	double		shared_blk_write_time;	/* time spent writing, in msec */
 #if PG_VERSION_NUM >= 170000
-	double		local_blk_read_time;/* time spent reading local blocks,in msec*/
-	double		local_blk_write_time;/* time spent writing local blocks,in ms */
+	double		local_blk_read_time;	/* time spent reading local blocks,in
+										 * msec */
+	double		local_blk_write_time;	/* time spent writing local blocks,in
+										 * ms */
 #endif
-	double		temp_blk_read_time;	/* time spent reading temp blocks,
-									   in msec */
-	double		temp_blk_write_time;/* time spent writing temp blocks,
-									   in msec */
-	TimestampTz	first_call;			/* timestamp of first call  */
-	TimestampTz	last_call;			/* timestamp of last call  */
-	double		usage;				/* usage factor */
+	double		temp_blk_read_time; /* time spent reading temp blocks, in msec */
+	double		temp_blk_write_time;	/* time spent writing temp blocks, in
+										 * msec */
+	TimestampTz first_call;		/* timestamp of first call  */
+	TimestampTz last_call;		/* timestamp of last call  */
+	double		usage;			/* usage factor */
 } Counters;
 
 /*
@@ -166,7 +172,7 @@ typedef struct pgspGlobalStats
 {
 	int64		dealloc;		/* # of times entries were deallocated */
 	TimestampTz stats_reset;	/* timestamp with all stats reset */
-} pgspGlobalStats;
+}			pgspGlobalStats;
 
 /*
  * Statistics per plan
@@ -175,13 +181,13 @@ typedef struct pgspGlobalStats
  */
 typedef struct pgspEntry
 {
-	pgspHashKey	key;			/* hash key of entry - MUST BE FIRST */
+	pgspHashKey key;			/* hash key of entry - MUST BE FIRST */
 	Counters	counters;		/* the statistics for this query */
 	Size		plan_offset;	/* plan text offset in extern file */
 	int			plan_len;		/* # of valid bytes in query string */
 	int			encoding;		/* query encoding */
 	slock_t		mutex;			/* protects the counters only */
-} pgspEntry;
+}			pgspEntry;
 
 /*
  * Global shared state
@@ -197,7 +203,7 @@ typedef struct pgspSharedState
 	int			n_writers;		/* number of active writers to query file */
 	int			gc_count;		/* plan file garbage collection cycle count */
 	pgspGlobalStats stats;		/* global statistics for pgsp */
-} pgspSharedState;
+}			pgspSharedState;
 
 /*---- Local variables ----*/
 
@@ -214,7 +220,7 @@ static ProcessUtility_hook_type prev_ProcessUtility = NULL;
 static planner_hook_type prev_planner_hook = NULL;
 
 /* Links to shared memory state */
-static pgspSharedState *shared_state = NULL;
+static pgspSharedState * shared_state = NULL;
 static HTAB *hash_table = NULL;
 
 /*---- GUC variables ----*/
@@ -222,10 +228,10 @@ static HTAB *hash_table = NULL;
 typedef enum
 {
 	TRACK_LEVEL_NONE,			/* track no statements */
-	TRACK_LEVEL_TOP,				/* only top level statements */
-	TRACK_LEVEL_ALL,				/* all statements, including nested ones */
+	TRACK_LEVEL_TOP,			/* only top level statements */
+	TRACK_LEVEL_ALL,			/* all statements, including nested ones */
 	TRACK_LEVEL_VERBOSE			/* all statements, including internal ones */
-}	PGSPTrackLevel;
+}			PGSPTrackLevel;
 
 static const struct config_enum_entry track_options[] =
 {
@@ -238,29 +244,29 @@ static const struct config_enum_entry track_options[] =
 
 typedef enum
 {
-	PLAN_FORMAT_RAW,		/* No conversion. Shorten JSON */
-	PLAN_FORMAT_TEXT,		/* Traditional text representation */
-	PLAN_FORMAT_JSON,		/* JSON representation */
-	PLAN_FORMAT_YAML,		/* YAML */
-	PLAN_FORMAT_XML,		/* XML  */
-}	PGSPPlanFormats;
+	PLAN_FORMAT_RAW,			/* No conversion. Shorten JSON */
+	PLAN_FORMAT_TEXT,			/* Traditional text representation */
+	PLAN_FORMAT_JSON,			/* JSON representation */
+	PLAN_FORMAT_YAML,			/* YAML */
+	PLAN_FORMAT_XML,			/* XML  */
+}			PGSPPlanFormats;
 
 static const struct config_enum_entry plan_formats[] =
 {
-	{"raw" , PLAN_FORMAT_RAW , false},
+	{"raw", PLAN_FORMAT_RAW, false},
 	{"text", PLAN_FORMAT_TEXT, false},
 	{"json", PLAN_FORMAT_JSON, false},
 	{"yaml", PLAN_FORMAT_YAML, false},
-	{"xml" , PLAN_FORMAT_XML , false},
+	{"xml", PLAN_FORMAT_XML, false},
 	{NULL, 0, false}
 };
 
 /* options for plan storage */
 typedef enum
 {
-	PLAN_STORAGE_SHMEM,		/* plan is stored as a part of hash entry */
-	PLAN_STORAGE_FILE		/* plan is stored in a separate file */
-}  pgspPlanStorage;
+	PLAN_STORAGE_SHMEM,			/* plan is stored as a part of hash entry */
+	PLAN_STORAGE_FILE			/* plan is stored in a separate file */
+}			pgspPlanStorage;
 
 static const struct config_enum_entry plan_storage_options[] =
 {
@@ -270,7 +276,7 @@ static const struct config_enum_entry plan_storage_options[] =
 };
 
 static int	store_size;			/* max # statements to track */
-static int	track_level = TRACK_LEVEL_TOP;		/* tracking level */
+static int	track_level = TRACK_LEVEL_TOP;	/* tracking level */
 static int	min_duration;		/* min duration to record */
 static bool dump_on_shutdown;	/* whether to save stats across shutdown */
 static bool log_analyze;		/* Similar to EXPLAIN (ANALYZE *) */
@@ -278,9 +284,9 @@ static bool log_verbose;		/* Similar to EXPLAIN (VERBOSE *) */
 static bool log_buffers;		/* Similar to EXPLAIN (BUFFERS *) */
 static bool log_timing;			/* Similar to EXPLAIN (TIMING *) */
 static bool log_triggers;		/* whether to log trigger statistics  */
-static int  plan_format= PLAN_FORMAT_TEXT;		/* Plan representation style in
-								 * pg_store_plans.plan  */
-static int  plan_storage = PLAN_STORAGE_FILE;	/* Plan storage type */
+static int	plan_format = PLAN_FORMAT_TEXT; /* Plan representation style in
+											 * pg_store_plans.plan  */
+static int	plan_storage = PLAN_STORAGE_FILE;	/* Plan storage type */
 
 
 /* disables tracking overriding track_level */
@@ -336,28 +342,36 @@ static void pgsp_shmem_request(void);
 static void pgsp_shmem_startup(void);
 static void pgsp_shmem_shutdown(int code, Datum arg);
 static void pgsp_ExecutorStart(QueryDesc *queryDesc, int eflags);
+
+#if PG_VERSION_NUM >= 180000
 static void pgsp_ExecutorRun(QueryDesc *queryDesc,
-				 ScanDirection direction,
+							 ScanDirection direction,
+							 uint64 count);
+#else
+static void pgsp_ExecutorRun(QueryDesc *queryDesc,
+							 ScanDirection direction,
 							 uint64 count, bool execute_once);
+#endif
+
 static void pgsp_ExecutorFinish(QueryDesc *queryDesc);
 static void pgsp_ExecutorEnd(QueryDesc *queryDesc);
 static void pgsp_ProcessUtility(PlannedStmt *pstmt, const char *queryString,
-					bool readOnlyTree,
-					ProcessUtilityContext context, ParamListInfo params,
-					QueryEnvironment *queryEnv,
-					DestReceiver *dest, COMPTAG_TYPE *completionTag);
+								bool readOnlyTree,
+								ProcessUtilityContext context, ParamListInfo params,
+								QueryEnvironment *queryEnv,
+								DestReceiver *dest, COMPTAG_TYPE * completionTag);
 static PlannedStmt *pgsp_planner(Query *parse, const char *query_string,
 								 int cursorOptions, ParamListInfo boundParams);
-static uint32 hash_query(const char* query);
+static uint32 hash_query(const char *query);
 static void pgsp_store(QueryDesc *queryDesc, queryid_t queryId,
-			uint64 planId,
-		   double total_time, uint64 rows,
-		   const BufferUsage *bufusage);
+					   uint64 planId,
+					   double total_time, uint64 rows,
+					   const BufferUsage *bufusage);
 static void pg_store_plans_internal(FunctionCallInfo fcinfo,
 									pgspVersion api_version);
 static Size shared_mem_size(void);
-static pgspEntry *entry_alloc(pgspHashKey *key, Size plan_offset, int plan_len,
-							  bool sticky);
+static pgspEntry * entry_alloc(pgspHashKey * key, Size plan_offset, int plan_len,
+							   bool sticky);
 static bool ptext_store(const char *plan, int plan_len, Size *plan_offset,
 						int *gc_count);
 static char *ptext_load_file(Size *buffer_size);
@@ -367,6 +381,7 @@ static bool need_gc_ptexts(void);
 static void gc_ptexts(void);
 static void entry_dealloc(void);
 static void entry_reset(void);
+
 
 /*
  * Module load callback
@@ -386,7 +401,7 @@ _PG_init(void)
 		return;
 
 	/*
-     * Inform the postmaster that we want to enable query_id calculation if
+	 * Inform the postmaster that we want to enable query_id calculation if
 	 * compute_query_id is set to auto.
 	 */
 	EnableQueryId();
@@ -395,7 +410,7 @@ _PG_init(void)
 	 * Define (or redefine) custom GUC variables.
 	 */
 	DefineCustomIntVariable("pg_store_plans.max",
-	  "Sets the maximum number of plans tracked by pg_store_plans.",
+							"Sets the maximum number of plans tracked by pg_store_plans.",
 							NULL,
 							&store_size,
 							1000,
@@ -408,7 +423,7 @@ _PG_init(void)
 							NULL);
 
 	DefineCustomIntVariable("pg_store_plans.max_plan_length",
-	  "Sets the maximum length of plans stored by pg_store_plans.",
+							"Sets the maximum length of plans stored by pg_store_plans.",
 							NULL,
 							&max_plan_len,
 							5000,
@@ -421,7 +436,7 @@ _PG_init(void)
 							NULL);
 
 	DefineCustomEnumVariable("pg_store_plans.plan_storage",
-			   "Selects where to store plan texts.",
+							 "Selects where to store plan texts.",
 							 NULL,
 							 &plan_storage,
 							 PLAN_STORAGE_FILE,
@@ -433,7 +448,7 @@ _PG_init(void)
 							 NULL);
 
 	DefineCustomEnumVariable("pg_store_plans.track",
-			   "Selects which plans are tracked by pg_store_plans.",
+							 "Selects which plans are tracked by pg_store_plans.",
 							 NULL,
 							 &track_level,
 							 TRACK_LEVEL_TOP,
@@ -445,7 +460,7 @@ _PG_init(void)
 							 NULL);
 
 	DefineCustomEnumVariable("pg_store_plans.plan_format",
-			   "Selects which format to be appied for plan representation in pg_store_plans.",
+							 "Selects which format to be appied for plan representation in pg_store_plans.",
 							 NULL,
 							 &plan_format,
 							 PLAN_FORMAT_TEXT,
@@ -457,7 +472,7 @@ _PG_init(void)
 							 NULL);
 
 	DefineCustomIntVariable("pg_store_plans.min_duration",
-					"Minimum duration to record plan in milliseconds.",
+							"Minimum duration to record plan in milliseconds.",
 							NULL,
 							&min_duration,
 							0,
@@ -470,7 +485,7 @@ _PG_init(void)
 							NULL);
 
 	DefineCustomBoolVariable("pg_store_plans.save",
-			   "Save pg_store_plans statistics across server shutdowns.",
+							 "Save pg_store_plans statistics across server shutdowns.",
 							 NULL,
 							 &dump_on_shutdown,
 							 true,
@@ -525,7 +540,7 @@ _PG_init(void)
 							 NULL);
 
 	DefineCustomBoolVariable("pg_store_plans.log_verbose",
-			   "Set VERBOSE for EXPLAIN on logging.",
+							 "Set VERBOSE for EXPLAIN on logging.",
 							 NULL,
 							 &log_verbose,
 							 false,
@@ -537,7 +552,7 @@ _PG_init(void)
 
 	EmitWarningsOnPlaceholders("pg_store_plans");
 
-#if PG_VERSION_NUM < 150000	
+#if PG_VERSION_NUM < 150000
 	pgsp_shmem_request();
 #endif
 
@@ -628,8 +643,8 @@ pgsp_shmem_startup(void)
 	LWLockAcquire(AddinShmemInitLock, LW_EXCLUSIVE);
 
 	shared_state = ShmemInitStruct("pg_store_plans",
-						   sizeof(pgspSharedState),
-						   &found);
+								   sizeof(pgspSharedState),
+								   &found);
 
 	if (!found)
 	{
@@ -655,9 +670,9 @@ pgsp_shmem_startup(void)
 	if (plan_storage == PLAN_STORAGE_SHMEM)
 		info.entrysize += max_plan_len;
 	hash_table = ShmemInitHash("pg_store_plans hash",
-							  store_size, store_size,
-							  &info, HASH_ELEM |
-							  HASH_BLOBS);
+							   store_size, store_size,
+							   &info, HASH_ELEM |
+							   HASH_BLOBS);
 
 	LWLockRelease(AddinShmemInitLock);
 
@@ -734,8 +749,8 @@ pgsp_shmem_startup(void)
 		goto data_error;
 
 	/*
-	 * If the file contains more entries than the current configuration allows,
-	 * we just load as many as we can fit.
+	 * If the file contains more entries than the current configuration
+	 * allows, we just load as many as we can fit.
 	 */
 	if (num > store_size)
 		num = store_size;
@@ -770,9 +785,9 @@ pgsp_shmem_startup(void)
 		/* Clip to available length if needed */
 		if (temp.plan_len >= plan_size)
 			temp.plan_len = pg_encoding_mbcliplen(temp.encoding,
-												   buffer,
-												   temp.plan_len,
-												   plan_size - 1);
+												  buffer,
+												  temp.plan_len,
+												  plan_size - 1);
 
 		buffer[temp.plan_len] = '\0';
 
@@ -953,38 +968,68 @@ error:
 static char *
 pgsp_build_json_plan(QueryDesc *queryDesc)
 {
-    ExplainState *es;
-    StringInfo	  es_str;
+	ExplainState *es;
+	StringInfo	es_str;
 
-    es = NewExplainState();
-    es_str = es->str;
+	es = NewExplainState();
+	es_str = es->str;
 
-    es->analyze = queryDesc->instrument_options;
-    es->verbose = log_verbose;
-    es->buffers = (es->analyze && log_buffers);
-    es->timing = (es->analyze && log_timing);
-    es->format = EXPLAIN_FORMAT_JSON;
+	es->analyze = queryDesc->instrument_options;
+	es->verbose = log_verbose;
+	es->buffers = (es->analyze && log_buffers);
+	es->timing = (es->analyze && log_timing);
+	es->format = EXPLAIN_FORMAT_JSON;
 
-    ExplainBeginOutput(es);
-    ExplainPrintPlan(es, queryDesc);
-    if (log_triggers)
-        pgspExplainTriggers(es, queryDesc);
-    ExplainEndOutput(es);
+	ExplainBeginOutput(es);
+	ExplainPrintPlan(es, queryDesc);
+	if (log_triggers)
+		pgspExplainTriggers(es, queryDesc);
+	ExplainEndOutput(es);
 
-    /* Remove last line break */
-    if (es_str->len > 0 && es_str->data[es_str->len - 1] == '\n')
-        es_str->data[--es_str->len] = '\0';
+	/* Remove last line break */
+	if (es_str->len > 0 && es_str->data[es_str->len - 1] == '\n')
+		es_str->data[--es_str->len] = '\0';
 
-    /* JSON outmost braces. */
-    if (es_str->len > 0)
-    {
-        es_str->data[0] = '{';
-        es_str->data[es_str->len - 1] = '}';
-    }
-
-    return es_str->data;
+	/* JSON outmost braces. */
+	if (es_str->len > 0)
+	{
+		es_str->data[0] = '{';
+		es_str->data[es_str->len - 1] = '}';
+	}
+	return es_str->data;
 }
 
+static uint64
+pgsp_compute_plan_id(PlannedStmt *plan)
+{
+	uint64		planId = PGSP_NO_PLANID;
+	JumbleState *jstate = pgsp_init_jumble_state();
+	ListCell   *lc;
+
+	if (jstate == NULL)
+		return planId;
+
+	/* Jumble the plan tree to compute planId */
+	pgsp_jumble_plan_tree(jstate, plan->planTree);
+	foreach(lc, plan->subplans)
+	{
+		Plan	   *subplan = (Plan *) lfirst(lc);
+
+		pgsp_jumble_plan_tree(jstate, subplan);
+	}
+	pgsp_jumble_range_table(jstate, plan->rtable);
+
+	if (jstate->jumble_len > 0)
+	{
+		planId = DatumGetUInt64(hash_any_extended(jstate->jumble,
+												  jstate->jumble_len,
+												  0));
+	}
+
+	pfree(jstate);
+
+	return planId;
+}
 
 /*
  * ExecutorStart hook: start up tracking if needed
@@ -996,8 +1041,8 @@ pgsp_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		(eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
 	{
 		queryDesc->instrument_options |=
-			(log_timing ? INSTRUMENT_TIMER : 0)|
-			(log_timing ? 0: INSTRUMENT_ROWS)|
+			(log_timing ? INSTRUMENT_TIMER : 0) |
+			(log_timing ? 0 : INSTRUMENT_ROWS) |
 			(log_buffers ? INSTRUMENT_BUFFERS : 0);
 	}
 
@@ -1007,37 +1052,45 @@ pgsp_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		standard_ExecutorStart(queryDesc, eflags);
 
 	/*
-	 * Set up to track total elapsed time in ExecutorRun. Allocate in per-query
-	 * context so as to be free at ExecutorEnd.
+	 * Set up to track total elapsed time in ExecutorRun. Allocate in
+	 * per-query context so as to be free at ExecutorEnd.
 	 */
-	if (!IsParallelWorker() && queryDesc->totaltime == NULL &&
-			pgsp_enabled(queryDesc->plannedstmt->queryId))
+	if (!IsParallelWorker() && queryDesc->totaltime == NULL && pgsp_enabled(queryDesc->plannedstmt->queryId))
 	{
 		MemoryContext oldcxt;
 
 		oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
 		queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL
-										  , false
-										 );
+										  ,false
+			);
 		MemoryContextSwitchTo(oldcxt);
 	}
-
 }
 
 /*
  * ExecutorRun hook: all we need do is track nesting depth
  */
 static void
-pgsp_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count,
-				 bool execute_once)
+#if PG_VERSION_NUM >= 180000
+pgsp_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count)
+#else
+pgsp_ExecutorRun(QueryDesc *queryDesc, ScanDirection direction, uint64 count, bool execute_once)
+#endif
 {
 	nested_level++;
 	PG_TRY();
 	{
+#if PG_VERSION_NUM >= 180000
+		if (prev_ExecutorRun)
+			prev_ExecutorRun(queryDesc, direction, count);
+		else
+			standard_ExecutorRun(queryDesc, direction, count);
+#else
 		if (prev_ExecutorRun)
 			prev_ExecutorRun(queryDesc, direction, count, execute_once);
 		else
 			standard_ExecutorRun(queryDesc, direction, count, execute_once);
+#endif
 		nested_level--;
 	}
 	PG_CATCH();
@@ -1088,27 +1141,27 @@ pgsp_ExecutorEnd(QueryDesc *queryDesc)
 		if (pgsp_enabled(queryDesc->plannedstmt->queryId) &&
 			queryDesc->totaltime->total &&
 			queryDesc->totaltime->total >=
-			(double)min_duration / 1000.0)
+			(double) min_duration / 1000.0)
 		{
-			queryid_t	  queryid;
-			uint64 planId;
+			queryid_t	queryid;
+			uint64		planId;
 
 			queryid = queryDesc->plannedstmt->queryId;
 
 			Assert(queryid != PGSP_NO_QUERYID);
 
-			planId = pgsp_get_cached_plan_id(queryid);
-
-			if (planId != 0) {
-				    pgsp_remove_plan_id(queryid);
-			}
+#if PG_VERSION_NUM >= 180000
+			planId = queryDesc->plannedstmt->planId;
+#else
+			planId = pgsp_compute_plan_id(queryDesc->plannedstmt);
+#endif
 
 			pgsp_store(queryDesc,
-						queryid,
-						planId,
-						queryDesc->totaltime->total * 1000.0,	/* convert to msec */
-						queryDesc->estate->es_processed,
-						&queryDesc->totaltime->bufusage);
+					   queryid,
+					   planId,
+					   queryDesc->totaltime->total * 1000.0,	/* convert to msec */
+					   queryDesc->estate->es_processed,
+					   &queryDesc->totaltime->bufusage);
 		}
 	}
 
@@ -1126,7 +1179,7 @@ pgsp_ProcessUtility(PlannedStmt *pstmt, const char *queryString,
 					bool readOnlyTree,
 					ProcessUtilityContext context, ParamListInfo params,
 					QueryEnvironment *queryEnv,
-					DestReceiver *dest, COMPTAG_TYPE *completionTag)
+					DestReceiver *dest, COMPTAG_TYPE * completionTag)
 {
 	int			tag = nodeTag(pstmt->utilityStmt);
 	bool		reset_force_disabled = false;
@@ -1174,53 +1227,16 @@ pgsp_planner(Query *parse, const char *query_string, int cursorOptions,
 			 ParamListInfo boundParams)
 {
 	PlannedStmt *result;
-	ListCell *lc;
 
 	if (prev_planner_hook)
 		result = prev_planner_hook(parse, query_string, cursorOptions, boundParams);
 	else
 		result = standard_planner(parse, query_string, cursorOptions, boundParams);
 
-	/* Compute planId for the plan if tracking is enabled */
-	// if (!pgsp_enabled(result->queryId))
-	// 	elog(DEBUG3, "pg_store_plans: plan tracking is disabled for queryid %lu",
-	// 		 (unsigned long)result->queryId);
-	// if (result->planTree == NULL)
-	// 	elog(DEBUG3, "pg_store_plans: planTree is NULL for queryid %lu",
-	// 		 (unsigned long)result->queryId);
-	if (pgsp_enabled(result->queryId) && result->planTree != NULL)
-	{
-		JumbleState *jstate = pgsp_init_jumble_state();
-		if (jstate == NULL)
-            return result; 
-		
-		/* Jumble the plan tree to compute planId */
-		pgsp_jumble_plan_tree(jstate, result->planTree);
-		foreach(lc, result->subplans)
-		{
-			Plan	   *subplan = (Plan *) lfirst(lc);
-			pgsp_jumble_plan_tree(jstate, subplan);
-		}
-		pgsp_jumble_range_table(jstate, result->rtable);	
-
-		// char *plan_string = nodeToString(result->planTree);
-		// elog(DEBUG3, "pg_store_plans: Plan Tree: %s", plan_string);
-		// pfree(plan_string);
-		
-		if (jstate->jumble_len > 0)
-		{
-			uint64 planId;
-			planId = DatumGetUInt64(hash_any_extended(jstate->jumble,
-                                                      jstate->jumble_len,
-                                                      0));
-   			pgsp_cache_plan_id(result->queryId, planId);
-
-		}
-		
-		pfree(jstate->jumble);
-		pfree(jstate->clocations);
-		pfree(jstate);
-	}
+#if PG_VERSION_NUM >= 180000
+	if (pgsp_enabled(result->queryId))
+		result->planId = pgsp_compute_plan_id(result);
+#endif
 
 	return result;
 }
@@ -1239,13 +1255,14 @@ pgsp_planner(Query *parse, const char *query_string, int cursorOptions,
  *  extension gives enough resolution on queries.
  */
 static uint32
-hash_query(const char* query)
+hash_query(const char *query)
 {
-	uint32 queryid;
+	uint32		queryid;
 
-	char *normquery = pstrdup(query);
+	char	   *normquery = pstrdup(query);
+
 	normalize_expr(normquery, false);
-	queryid = hash_any((const unsigned char*)normquery, strlen(normquery));
+	queryid = hash_any((const unsigned char *) normquery, strlen(normquery));
 	pfree(normquery);
 
 	/* If we are unlucky enough to get a hash of zero, use 1 instead */
@@ -1270,12 +1287,12 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 	pgspHashKey key;
 	pgspEntry  *entry;
 	char	   *norm_query = NULL;
-	int 		plan_len;
+	int			plan_len;
 	char	   *shorten_plan = NULL;
-	volatile pgspEntry *e;
+	volatile	pgspEntry *e;
 	Size		plan_offset = 0;
 	bool		do_gc = false;
-	char		 *json_plan; 
+	char	   *json_plan;
 
 
 	/* Safety check... */
@@ -1303,31 +1320,32 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 		shorten_plan = pgsp_json_shorten(json_plan);
 		plan_len = strlen(shorten_plan);
 
-		// elog(DEBUG3, "pg_store_plans: Shorten plan: %s", shorten_plan);
-		// elog(DEBUG3, "pg_store_plans: Original plan: %s", json_plan);
+		/* elog(DEBUG3, "pg_store_plans: Shorten plan: %s", shorten_plan); */
+		/* elog(DEBUG3, "pg_store_plans: Original plan: %s", json_plan); */
 
 		pfree(json_plan);
 
 		if (plan_len >= shared_state->plan_size)
 			plan_len = pg_encoding_mbcliplen(GetDatabaseEncoding(),
-											shorten_plan,
-											plan_len,
-											shared_state->plan_size - 1);
+											 shorten_plan,
+											 plan_len,
+											 shared_state->plan_size - 1);
 
-  		/* Store the plan text, if the entry not present */
+		/* Store the plan text, if the entry not present */
 		if (plan_storage == PLAN_STORAGE_FILE)
 		{
-			int		gc_count;
-			bool	stored;
+			int			gc_count;
+			bool		stored;
 
 			/* Append new plan text to file with only shared lock held */
 			stored = ptext_store(shorten_plan, plan_len, &plan_offset, &gc_count);
 
 			/*
-			* Determine whether we need to garbage collect external query texts
-			* while the shared lock is still held.  This micro-optimization
-			* avoids taking the time to decide this while holding exclusive lock.
-			*/
+			 * Determine whether we need to garbage collect external query
+			 * texts while the shared lock is still held.  This
+			 * micro-optimization avoids taking the time to decide this while
+			 * holding exclusive lock.
+			 */
 			do_gc = need_gc_ptexts();
 
 			/* Acquire exclusive lock as required by entry_alloc() */
@@ -1335,12 +1353,12 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 			LWLockAcquire(shared_state->lock, LW_EXCLUSIVE);
 
 			/*
-			* A garbage collection may have occurred while we weren't holding the
-			* lock.  In the unlikely event that this happens, the plan text we
-			* stored above will have been garbage collected, so write it again.
-			* This should be infrequent enough that doing it while holding
-			* exclusive lock isn't a performance problem.
-			*/
+			 * A garbage collection may have occurred while we weren't holding
+			 * the lock.  In the unlikely event that this happens, the plan
+			 * text we stored above will have been garbage collected, so write
+			 * it again. This should be infrequent enough that doing it while
+			 * holding exclusive lock isn't a performance problem.
+			 */
 			if (!stored || shared_state->gc_count != gc_count)
 				stored = ptext_store(shorten_plan, plan_len, &plan_offset, NULL);
 
@@ -1355,7 +1373,7 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 		/* shorten_plan is terminated by NUL */
 		if (plan_storage == PLAN_STORAGE_SHMEM)
 			memcpy(SHMEM_PLAN_PTR(entry), shorten_plan, plan_len + 1);
-			
+
 
 		/* If needed, perform garbage collection while exclusive lock held */
 		if (do_gc)
@@ -1570,14 +1588,14 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 	 * again after we have the lock, but it's unlikely enough to make this a
 	 * win despite occasional duplicated work.  We need to reload if anybody
 	 * writes to the file (either a retail ptext_store(), or a garbage
-	 * collection) between this point and where we've gotten shared lock.  If a
-	 * ptext_store is actually in progress when we look, we might as well skip
-	 * the speculative load entirely.
+	 * collection) between this point and where we've gotten shared lock.  If
+	 * a ptext_store is actually in progress when we look, we might as well
+	 * skip the speculative load entirely.
 	 */
 
 	/* Take the mutex so we can examine variables */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 
 		SpinLockAcquire(&s->mutex);
 		extent = s->extent;
@@ -1604,11 +1622,11 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 	LWLockAcquire(shared_state->lock, LW_SHARED);
 
 	/*
-	 * Here it is safe to examine extent and gc_count without taking the mutex.
-	 * Note that although other processes might change shared_state->extent
-	 * just after we look at it, the strings they then write into the file
-	 * cannot yet be referenced in the hashtable, so we don't care whether we
-	 * see them or not.
+	 * Here it is safe to examine extent and gc_count without taking the
+	 * mutex. Note that although other processes might change
+	 * shared_state->extent just after we look at it, the strings they then
+	 * write into the file cannot yet be referenced in the hashtable, so we
+	 * don't care whether we see them or not.
 	 *
 	 * If ptext_load_file fails, we just press on; we'll return NULL for every
 	 * plan text.
@@ -1629,8 +1647,8 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 		Datum		values[PG_STORE_PLANS_COLS];
 		bool		nulls[PG_STORE_PLANS_COLS];
 		int			i = 0;
-		int64		queryid      = entry->key.queryid;
-		int64		planid       = entry->key.planid;
+		int64		queryid = entry->key.queryid;
+		int64		planid = entry->key.planid;
 		Counters	tmp;
 		double		stddev;
 
@@ -1653,16 +1671,16 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 			nulls[i++] = true;	/* queryid */
 			nulls[i++] = true;	/* planid */
 
-			/* queryid_stat_statemetns*/
+			/* queryid_stat_statemetns */
 			if (api_version == PGSP_V1_5)
 				nulls[i++] = true;
 		}
 
 		if (is_allowed_role || entry->key.userid == userid)
 		{
-			char	   *pstr; /* Plan string */
-			char	   *mstr; /* Modified plan string */
-			char	   *estr; /* Encoded modified plan string */
+			char	   *pstr;	/* Plan string */
+			char	   *mstr;	/* Modified plan string */
+			char	   *estr;	/* Encoded modified plan string */
 
 			if (plan_storage == PLAN_STORAGE_FILE)
 				pstr = ptext_fetch(entry->plan_offset, entry->plan_len,
@@ -1672,7 +1690,8 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 
 			if (pstr == NULL)
 				values[i++] = CStringGetTextDatum("<invalid plan>");
-			else {
+			else
+			{
 				switch (plan_format)
 				{
 					case PLAN_FORMAT_TEXT:
@@ -1694,11 +1713,11 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 
 				estr = (char *)
 					pg_do_encoding_conversion((unsigned char *) mstr,
-											strlen(mstr),
-											entry->encoding,
-											GetDatabaseEncoding());
+											  strlen(mstr),
+											  entry->encoding,
+											  GetDatabaseEncoding());
 				values[i++] = CStringGetTextDatum(estr);
-		
+
 				if (estr != mstr)
 					pfree(estr);
 
@@ -1713,7 +1732,7 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 
 		/* copy counters to a local variable to keep locking time short */
 		{
-			volatile pgspEntry *e = (volatile pgspEntry *) entry;
+			volatile	pgspEntry *e = (volatile pgspEntry *) entry;
 
 			SpinLockAcquire(&e->mutex);
 			tmp = e->counters;
@@ -1733,8 +1752,8 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 		/*
 		 * Note we are calculating the population variance here, not the
 		 * sample variance, as we have data for the whole population, so
-		 * Bessel's correction is not used, and we don't divide by
-		 * tmp.calls - 1.
+		 * Bessel's correction is not used, and we don't divide by tmp.calls -
+		 * 1.
 		 */
 		if (tmp.calls > 1)
 			stddev = sqrt(tmp.sum_var_time / tmp.calls);
@@ -1786,8 +1805,8 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 
 	if (pbuffer)
 		free(pbuffer);
-		
- 	LWLockRelease(shared_state->lock);
+
+	LWLockRelease(shared_state->lock);
 }
 
 /* Number of output arguments (columns) for pg_stat_statements_info */
@@ -1818,7 +1837,7 @@ pg_store_plans_info(PG_FUNCTION_ARGS)
 
 	/* Read global statistics for pg_stat_statements */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 
 		SpinLockAcquire(&s->mutex);
 		stats = s->stats;
@@ -1870,7 +1889,7 @@ shared_mem_size(void)
  * have made the entry while we waited to get exclusive lock.
  */
 static pgspEntry *
-entry_alloc(pgspHashKey *key, Size plan_offset, int plan_len, bool sticky)
+entry_alloc(pgspHashKey * key, Size plan_offset, int plan_len, bool sticky)
 {
 	pgspEntry  *entry;
 	bool		found;
@@ -1908,8 +1927,8 @@ entry_alloc(pgspHashKey *key, Size plan_offset, int plan_len, bool sticky)
 static int
 entry_cmp(const void *lhs, const void *rhs)
 {
-	double		l_usage = (*(pgspEntry *const *) lhs)->counters.usage;
-	double		r_usage = (*(pgspEntry *const *) rhs)->counters.usage;
+	double		l_usage = (*(pgspEntry * const *) lhs)->counters.usage;
+	double		r_usage = (*(pgspEntry * const *) rhs)->counters.usage;
 
 	if (l_usage < r_usage)
 		return -1;
@@ -1987,7 +2006,7 @@ entry_dealloc(void)
 
 	/* Increment the number of times entries are deallocated */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 
 		SpinLockAcquire(&s->mutex);
 		s->stats.dealloc += 1;
@@ -2017,14 +2036,14 @@ ptext_store(const char *plan, int plan_len, Size *plan_offset, int *gc_count)
 	Size		off;
 	int			fd;
 
-	Assert (plan_storage == PLAN_STORAGE_FILE);
+	Assert(plan_storage == PLAN_STORAGE_FILE);
 
 	/*
 	 * We use a spinlock to protect extent/n_writers/gc_count, so that
 	 * multiple processes may execute this function concurrently.
 	 */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 
 		SpinLockAcquire(&s->mutex);
 		off = s->extent;
@@ -2051,7 +2070,7 @@ ptext_store(const char *plan, int plan_len, Size *plan_offset, int *gc_count)
 
 	/* Mark our write complete */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 
 		SpinLockAcquire(&s->mutex);
 		s->n_writers--;
@@ -2071,7 +2090,7 @@ error:
 
 	/* Mark our write complete */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 
 		SpinLockAcquire(&s->mutex);
 		s->n_writers--;
@@ -2100,7 +2119,7 @@ ptext_load_file(Size *buffer_size)
 	struct stat stat;
 	Size		nread;
 
-	Assert (plan_storage == PLAN_STORAGE_FILE);
+	Assert(plan_storage == PLAN_STORAGE_FILE);
 
 	fd = OpenTransientFile(PGSP_TEXT_FILE, O_RDONLY | PG_BINARY);
 	if (fd < 0)
@@ -2191,7 +2210,7 @@ static char *
 ptext_fetch(Size plan_offset, int plan_len,
 			char *buffer, Size buffer_size)
 {
-	Assert (plan_storage == PLAN_STORAGE_FILE);
+	Assert(plan_storage == PLAN_STORAGE_FILE);
 
 	/* File read failed? */
 	if (buffer == NULL)
@@ -2217,11 +2236,11 @@ need_gc_ptexts(void)
 {
 	Size		extent;
 
-	Assert (plan_storage == PLAN_STORAGE_FILE);
+	Assert(plan_storage == PLAN_STORAGE_FILE);
 
 	/* Read shared extent pointer */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 
 		SpinLockAcquire(&s->mutex);
 		extent = s->extent;
@@ -2272,7 +2291,7 @@ gc_ptexts(void)
 	Size		extent;
 	int			nentries;
 
-	Assert (plan_storage == PLAN_STORAGE_FILE);
+	Assert(plan_storage == PLAN_STORAGE_FILE);
 
 	/*
 	 * When called from store_entry, some other session might have proceeded
@@ -2449,7 +2468,7 @@ entry_reset(void)
 	 * Reset global statistics for pg_store_plans.
 	 */
 	{
-		volatile pgspSharedState *s = (volatile pgspSharedState *) shared_state;
+		volatile	pgspSharedState *s = (volatile pgspSharedState *) shared_state;
 		TimestampTz stats_reset = GetCurrentTimestamp();
 
 		SpinLockAcquire(&s->mutex);
@@ -2495,36 +2514,39 @@ pg_store_plans_hash_query(PG_FUNCTION_ARGS)
 Datum
 pg_store_plans_shorten(PG_FUNCTION_ARGS)
 {
-	text *short_plan = PG_GETARG_TEXT_P(0);
-	char *cjson = text_to_cstring(short_plan);
-	char *cshorten = pgsp_json_shorten(cjson);
+	text	   *short_plan = PG_GETARG_TEXT_P(0);
+	char	   *cjson = text_to_cstring(short_plan);
+	char	   *cshorten = pgsp_json_shorten(cjson);
+
 	PG_RETURN_TEXT_P(cstring_to_text(cshorten));
 }
 
 Datum
 pg_store_plans_normalize(PG_FUNCTION_ARGS)
 {
-	text *short_plan = PG_GETARG_TEXT_P(0);
-	char *cjson = text_to_cstring(short_plan);
-	char *cnormalized = pgsp_json_normalize(cjson);
+	text	   *short_plan = PG_GETARG_TEXT_P(0);
+	char	   *cjson = text_to_cstring(short_plan);
+	char	   *cnormalized = pgsp_json_normalize(cjson);
+
 	PG_RETURN_TEXT_P(cstring_to_text(cnormalized));
 }
 
 Datum
 pg_store_plans_jsonplan(PG_FUNCTION_ARGS)
 {
-	text *short_plan = PG_GETARG_TEXT_P(0);
-	char *cshort = text_to_cstring(short_plan);
-	char *cinflated = pgsp_json_inflate(cshort);
+	text	   *short_plan = PG_GETARG_TEXT_P(0);
+	char	   *cshort = text_to_cstring(short_plan);
+	char	   *cinflated = pgsp_json_inflate(cshort);
+
 	PG_RETURN_TEXT_P(cstring_to_text(cinflated));
 }
 
 Datum
 pg_store_plans_textplan(PG_FUNCTION_ARGS)
 {
-	text *short_plan = PG_GETARG_TEXT_P(0);
-	char *cshort = text_to_cstring(short_plan);
-	char *ctextized = pgsp_json_textize(cshort);
+	text	   *short_plan = PG_GETARG_TEXT_P(0);
+	char	   *cshort = text_to_cstring(short_plan);
+	char	   *ctextized = pgsp_json_textize(cshort);
 
 	PG_RETURN_TEXT_P(cstring_to_text(ctextized));
 }
@@ -2532,9 +2554,9 @@ pg_store_plans_textplan(PG_FUNCTION_ARGS)
 Datum
 pg_store_plans_yamlplan(PG_FUNCTION_ARGS)
 {
-	text *short_plan = PG_GETARG_TEXT_P(0);
-	char *cshort = text_to_cstring(short_plan);
-	char *cyamlized = pgsp_json_yamlize(cshort);
+	text	   *short_plan = PG_GETARG_TEXT_P(0);
+	char	   *cshort = text_to_cstring(short_plan);
+	char	   *cyamlized = pgsp_json_yamlize(cshort);
 
 	PG_RETURN_TEXT_P(cstring_to_text(cyamlized));
 }
@@ -2542,9 +2564,9 @@ pg_store_plans_yamlplan(PG_FUNCTION_ARGS)
 Datum
 pg_store_plans_xmlplan(PG_FUNCTION_ARGS)
 {
-	text *short_plan = PG_GETARG_TEXT_P(0);
-	char *cshort = text_to_cstring(short_plan);
-	char *cxmlized = pgsp_json_xmlize(cshort);
+	text	   *short_plan = PG_GETARG_TEXT_P(0);
+	char	   *cshort = text_to_cstring(short_plan);
+	char	   *cxmlized = pgsp_json_xmlize(cshort);
 
 	PG_RETURN_TEXT_P(cstring_to_text(cxmlized));
 }

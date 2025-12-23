@@ -198,6 +198,7 @@ DEFAULT_SETTER(workers_planned);
 DEFAULT_SETTER(workers_launched);
 BOOL_SETTER(inner_unique);
 BOOL_SETTER(async_capable);
+BOOL_SETTER(disabled);
 DEFAULT_SETTER(table_func_name);
 LIST_SETTER(presorted_key);
 LIST_SETTER(sortmethod_used);
@@ -361,6 +362,9 @@ print_current_node(pgspParserContext *ctx)
 
 	if (v->async_capable)
 		appendStringInfoString(s, "Async ");
+	
+	if (v->disabled)
+		appendStringInfoString(s, "Disabled ");
 
 	switch (v->nodetag)
 	{

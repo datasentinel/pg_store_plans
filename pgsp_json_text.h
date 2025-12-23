@@ -102,6 +102,7 @@ typedef struct
 	const char *workers_launched;
 	bool		inner_unique;
 	bool		async_capable;
+	bool 		disabled;
 	const char *table_func_name;
 	StringInfo	presorted_key;
 	StringInfo	sortmethod_used;
@@ -228,6 +229,7 @@ SETTERDECL(workers_planned);
 SETTERDECL(workers_launched);
 SETTERDECL(inner_unique);
 SETTERDECL(async_capable);
+SETTERDECL(disabled);
 SETTERDECL(table_func_name);
 SETTERDECL(presorted_key);
 SETTERDECL(sortmethod_used);

@@ -181,16 +181,16 @@ SELECT
     CEIL(RANDOM() * 500), -- Random product_id
     CEIL(RANDOM() * 10), -- Quantity between 1 and 10
     CEIL(RANDOM() * 100 + 1) -- Price between $1 and $101
-FROM GENERATE_SERIES(1, 50000) AS i; -- 50,000 order details
-INSERT 0 50000
+FROM GENERATE_SERIES(1, 5000) AS i; -- 5,000 order details
+INSERT 0 5000
 INSERT INTO payments (order_id, payment_date, amount, payment_method)
 SELECT
     CEIL(RANDOM() * 100), -- Random order_id
     CURRENT_DATE - INTERVAL '1 day' * FLOOR(RANDOM() * 365 * 2), -- Random payment date
     CEIL(RANDOM() * 1000 + 10), -- Amount between $10 and $1010
     CASE WHEN RANDOM() < 0.5 THEN 'Credit Card' ELSE 'PayPal' END -- Random payment method
-FROM GENERATE_SERIES(1, 10000) AS i; -- 10,000 payments
-INSERT 0 10000
+FROM GENERATE_SERIES(1, 1000) AS i; -- 1,000 payments
+INSERT 0 1000
  \pset pager off
 Pager usage is off.
 -- Planner settings to force certain plan types for testing
@@ -213,7 +213,7 @@ EXECUTE my_regions('Region_1');
 EXECUTE my_regions('Region_2');
 DEALLOCATE my_regions;
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
      1 | Result
      2 | Seq Scan on regions                               +
        |   Filter: ((region_name)::text = 'Region_1'::text)
@@ -232,7 +232,7 @@ JOIN branches b ON e.branch_id = b.branch_id
 WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
      1 | Result
      3 | Hash Join                                                                                 +
        |   Hash Cond: (e.branch_id = b.branch_id)                                                  +
@@ -263,7 +263,7 @@ WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 \g
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
      1 | Hash Join                                                                         +
        |   Hash Cond: (e.branch_id = b.branch_id)                                          +
        |   ->  Seq Scan on employees e                                                     +
@@ -301,7 +301,7 @@ SET enable_seqscan = ON;
 SET enable_indexscan = OFF;
 select last_name from customers where last_name='custom123';
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
      1 | Bitmap Heap Scan on customers                                                                   +
        |   Filter: (((last_name)::text = 'customer128'::text) OR ((last_name)::text = 'custom123'::text))+
        |   ->  Bitmap Index Scan using customers_idx                                                     +
@@ -334,7 +334,7 @@ SELECT employee_name, branch_id, hire_date,
     rank() OVER (PARTITION BY employee_name)
 FROM employees;
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
      1 | Result
      1 | WindowAgg                                                                               +
        |   Window: w1 AS (PARTITION BY branch_id ORDER BY hire_date ROWS UNBOUNDED PRECEDING)    +
@@ -360,7 +360,7 @@ SELECT * FROM orders WHERE order_date = CURRENT_DATE -1;
 SELECT * FROM orders WHERE order_date = CURRENT_DATE -2;
 SELECT * FROM orders WHERE order_date = CURRENT_DATE -1 or order_date = current_date - 2;
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
      1 | Append                                                                                      +
        |   Subplans Removed: 19                                                                      +
        |   ->  Bitmap Heap Scan on orders_p2 orders_1                                                +

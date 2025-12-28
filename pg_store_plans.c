@@ -69,7 +69,6 @@
 
 #include "pgsp_json.h"
 #include "pgsp_explain.h"
-#include "pgsp_hash.h"
 #include "pgsp_jumble.h"
 
 PG_MODULE_MAGIC;
@@ -1156,6 +1155,9 @@ pgsp_ExecutorEnd(QueryDesc *queryDesc)
 			planId = pgsp_compute_plan_id(queryDesc->plannedstmt);
 #endif
 
+			char *t = nodeToString(queryDesc->plannedstmt);
+			/* elog(DEBUG3, "pgsp_ExecutorEnd: plan: %s", t); */
+			pfree(t);
 			pgsp_store(queryDesc,
 					   queryid,
 					   planId,

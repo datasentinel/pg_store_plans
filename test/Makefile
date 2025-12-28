@@ -1,5 +1,5 @@
 MODULE_big = test_pg_store_plans_internals
-OBJS = test_pg_store_plans_internals.o ../pgsp_hash.o ../pgsp_jumble.o
+OBJS = test_pg_store_plans_internals.o ../pgsp_jumble.o
 
 EXTENSION = test_pg_store_plans_internals
 DATA = test_pg_store_plans_internals--1.0.sql

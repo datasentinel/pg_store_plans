@@ -4,7 +4,7 @@ MODULES = pg_store_plans
 STOREPLANSVER = 2.0
 
 MODULE_big = pg_store_plans
-OBJS = pg_store_plans.o pgsp_json.o pgsp_json_text.o pgsp_explain.o pgsp_hash.o pgsp_jumble.o
+OBJS = pg_store_plans.o pgsp_json.o pgsp_json_text.o pgsp_explain.o pgsp_jumble.o
 
 EXTENSION = pg_store_plans
 

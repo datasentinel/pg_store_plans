@@ -1155,9 +1155,10 @@ pgsp_ExecutorEnd(QueryDesc *queryDesc)
 			planId = pgsp_compute_plan_id(queryDesc->plannedstmt);
 #endif
 
-			char *t = nodeToString(queryDesc->plannedstmt);
-			/* elog(DEBUG3, "pgsp_ExecutorEnd: plan: %s", t); */
-			pfree(t);
+			/*
+			 * char *t = nodeToString(queryDesc->plannedstmt); elog(DEBUG3,
+			 * "pgsp_ExecutorEnd: plan: %s", t); pfree(t);
+			 */
 			pgsp_store(queryDesc,
 					   queryid,
 					   planId,

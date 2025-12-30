@@ -2,3 +2,4 @@
 *.so
 /.deps/
 /.vscode/
+/test/.deps/

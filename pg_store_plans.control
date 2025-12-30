@@ -1,5 +1,5 @@
 # pg_store_plans extension
-comment = 'Tracks execution plans of SQL statements (fork of pg_store_plans by Datasentinel)'
+comment = 'Datasentinel SQL execution plan tracking extension (fork of pg_store_plans)'
 default_version = '2.0'
 module_pathname = '$libdir/pg_store_plans'
 relocatable = true

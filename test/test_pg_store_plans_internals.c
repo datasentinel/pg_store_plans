@@ -934,7 +934,7 @@ static bool test_setop_plans(StringInfo buf)
     setop4->cmpCollations[0] = 0;
     setop4->cmpCollations[1] = 0;
 #else
-    setop4->dupColIdx = palloc(sizeof(AttrNumber) * 2
+    setop4->dupColIdx = palloc(sizeof(AttrNumber) * 2);
     setop4->dupColIdx[0] = 1;
     setop4->dupColIdx[1] = 2;
     setop4->dupOperators = palloc(sizeof(Oid) * 2);

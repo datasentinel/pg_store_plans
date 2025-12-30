@@ -8,20 +8,23 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
  /soft/projects/postgres/build/include/server/pg_config_os.h \
  /soft/projects/postgres/build/include/server/port.h \
  /soft/projects/postgres/build/include/server/utils/elog.h \
+ /soft/projects/postgres/build/include/server/lib/stringinfo.h \
  /soft/projects/postgres/build/include/server/utils/errcodes.h \
  /soft/projects/postgres/build/include/server/utils/palloc.h \
  /soft/projects/postgres/build/include/server/optimizer/planner.h \
  /soft/projects/postgres/build/include/server/nodes/pathnodes.h \
  /soft/projects/postgres/build/include/server/access/sdir.h \
- /soft/projects/postgres/build/include/server/lib/stringinfo.h \
  /soft/projects/postgres/build/include/server/nodes/params.h \
  /soft/projects/postgres/build/include/server/nodes/parsenodes.h \
+ /soft/projects/postgres/build/include/server/common/relpath.h \
+ /soft/projects/postgres/build/include/server/catalog/catversion.h \
  /soft/projects/postgres/build/include/server/nodes/bitmapset.h \
+ /soft/projects/postgres/build/include/server/nodes/nodes.h \
+ /soft/projects/postgres/build/include/server/nodes/nodetags.h \
  /soft/projects/postgres/build/include/server/nodes/lockoptions.h \
  /soft/projects/postgres/build/include/server/nodes/primnodes.h \
  /soft/projects/postgres/build/include/server/access/attnum.h \
  /soft/projects/postgres/build/include/server/nodes/pg_list.h \
- /soft/projects/postgres/build/include/server/nodes/nodes.h \
  /soft/projects/postgres/build/include/server/nodes/value.h \
  /soft/projects/postgres/build/include/server/partitioning/partdefs.h \
  /soft/projects/postgres/build/include/server/storage/block.h \
@@ -49,6 +52,7 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
  /soft/projects/postgres/build/include/server/catalog/pg_type_d.h \
  /soft/projects/postgres/build/include/server/storage/bufpage.h \
  /soft/projects/postgres/build/include/server/storage/item.h \
+ /soft/projects/postgres/build/include/server/varatt.h \
  /soft/projects/postgres/build/include/server/access/sysattr.h \
  /soft/projects/postgres/build/include/server/storage/buf.h \
  /soft/projects/postgres/build/include/server/executor/instrument.h \
@@ -82,6 +86,7 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
  /soft/projects/postgres/build/include/server/utils/relcache.h \
  /soft/projects/postgres/build/include/server/utils/tuplesort.h \
  /soft/projects/postgres/build/include/server/access/itup.h \
+ /soft/projects/postgres/build/include/server/utils/logtape.h \
  /soft/projects/postgres/build/include/server/utils/tuplestore.h \
  /soft/projects/postgres/build/include/server/lib/simplehash.h \
  /soft/projects/postgres/build/include/server/port/pg_bitutils.h \
@@ -102,16 +107,14 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
  /soft/projects/postgres/build/include/server/access/rmgrlist.h \
  /soft/projects/postgres/build/include/server/port/pg_crc32c.h \
  /soft/projects/postgres/build/include/server/port/pg_bswap.h \
- /soft/projects/postgres/build/include/server/storage/relfilenode.h \
- /soft/projects/postgres/build/include/server/common/relpath.h \
- /soft/projects/postgres/build/include/server/catalog/catversion.h \
+ /soft/projects/postgres/build/include/server/storage/relfilelocator.h \
  /soft/projects/postgres/build/include/server/storage/backendid.h \
  /soft/projects/postgres/build/include/server/storage/sinval.h \
- /soft/projects/postgres/build/include/server/utils/guc.h \
- /soft/projects/postgres/build/include/server/utils/array.h \
- /soft/projects/postgres/build/include/server/utils/expandeddatum.h \
  /soft/projects/postgres/build/include/server/utils/rel.h \
  /soft/projects/postgres/build/include/server/access/xlog.h \
+ /soft/projects/postgres/build/include/server/access/xlogbackup.h \
+ /soft/projects/postgres/build/include/server/pgtime.h \
+ /soft/projects/postgres/build/include/server/catalog/catalog.h \
  /soft/projects/postgres/build/include/server/catalog/pg_class.h \
  /soft/projects/postgres/build/include/server/catalog/pg_class_d.h \
  /soft/projects/postgres/build/include/server/catalog/pg_index.h \
@@ -126,7 +129,7 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
  /soft/projects/postgres/build/include/server/utils/portal.h \
  /soft/projects/postgres/build/include/server/utils/plancache.h \
  /soft/projects/postgres/build/include/server/utils/resowner.h \
- /soft/projects/postgres/build/include/server/utils/queryjumble.h \
+ /soft/projects/postgres/build/include/server/nodes/queryjumble.h \
  /soft/projects/postgres/build/include/server/utils/builtins.h \
  /soft/projects/postgres/build/include/server/utils/fmgrprotos.h \
  /soft/projects/postgres/build/include/server/access/hash.h \
@@ -147,20 +150,23 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
 /soft/projects/postgres/build/include/server/pg_config_os.h:
 /soft/projects/postgres/build/include/server/port.h:
 /soft/projects/postgres/build/include/server/utils/elog.h:
+/soft/projects/postgres/build/include/server/lib/stringinfo.h:
 /soft/projects/postgres/build/include/server/utils/errcodes.h:
 /soft/projects/postgres/build/include/server/utils/palloc.h:
 /soft/projects/postgres/build/include/server/optimizer/planner.h:
 /soft/projects/postgres/build/include/server/nodes/pathnodes.h:
 /soft/projects/postgres/build/include/server/access/sdir.h:
-/soft/projects/postgres/build/include/server/lib/stringinfo.h:
 /soft/projects/postgres/build/include/server/nodes/params.h:
 /soft/projects/postgres/build/include/server/nodes/parsenodes.h:
+/soft/projects/postgres/build/include/server/common/relpath.h:
+/soft/projects/postgres/build/include/server/catalog/catversion.h:
 /soft/projects/postgres/build/include/server/nodes/bitmapset.h:
+/soft/projects/postgres/build/include/server/nodes/nodes.h:
+/soft/projects/postgres/build/include/server/nodes/nodetags.h:
 /soft/projects/postgres/build/include/server/nodes/lockoptions.h:
 /soft/projects/postgres/build/include/server/nodes/primnodes.h:
 /soft/projects/postgres/build/include/server/access/attnum.h:
 /soft/projects/postgres/build/include/server/nodes/pg_list.h:
-/soft/projects/postgres/build/include/server/nodes/nodes.h:
 /soft/projects/postgres/build/include/server/nodes/value.h:
 /soft/projects/postgres/build/include/server/partitioning/partdefs.h:
 /soft/projects/postgres/build/include/server/storage/block.h:
@@ -188,6 +194,7 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
 /soft/projects/postgres/build/include/server/catalog/pg_type_d.h:
 /soft/projects/postgres/build/include/server/storage/bufpage.h:
 /soft/projects/postgres/build/include/server/storage/item.h:
+/soft/projects/postgres/build/include/server/varatt.h:
 /soft/projects/postgres/build/include/server/access/sysattr.h:
 /soft/projects/postgres/build/include/server/storage/buf.h:
 /soft/projects/postgres/build/include/server/executor/instrument.h:
@@ -221,6 +228,7 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
 /soft/projects/postgres/build/include/server/utils/relcache.h:
 /soft/projects/postgres/build/include/server/utils/tuplesort.h:
 /soft/projects/postgres/build/include/server/access/itup.h:
+/soft/projects/postgres/build/include/server/utils/logtape.h:
 /soft/projects/postgres/build/include/server/utils/tuplestore.h:
 /soft/projects/postgres/build/include/server/lib/simplehash.h:
 /soft/projects/postgres/build/include/server/port/pg_bitutils.h:
@@ -241,16 +249,14 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
 /soft/projects/postgres/build/include/server/access/rmgrlist.h:
 /soft/projects/postgres/build/include/server/port/pg_crc32c.h:
 /soft/projects/postgres/build/include/server/port/pg_bswap.h:
-/soft/projects/postgres/build/include/server/storage/relfilenode.h:
-/soft/projects/postgres/build/include/server/common/relpath.h:
-/soft/projects/postgres/build/include/server/catalog/catversion.h:
+/soft/projects/postgres/build/include/server/storage/relfilelocator.h:
 /soft/projects/postgres/build/include/server/storage/backendid.h:
 /soft/projects/postgres/build/include/server/storage/sinval.h:
-/soft/projects/postgres/build/include/server/utils/guc.h:
-/soft/projects/postgres/build/include/server/utils/array.h:
-/soft/projects/postgres/build/include/server/utils/expandeddatum.h:
 /soft/projects/postgres/build/include/server/utils/rel.h:
 /soft/projects/postgres/build/include/server/access/xlog.h:
+/soft/projects/postgres/build/include/server/access/xlogbackup.h:
+/soft/projects/postgres/build/include/server/pgtime.h:
+/soft/projects/postgres/build/include/server/catalog/catalog.h:
 /soft/projects/postgres/build/include/server/catalog/pg_class.h:
 /soft/projects/postgres/build/include/server/catalog/pg_class_d.h:
 /soft/projects/postgres/build/include/server/catalog/pg_index.h:
@@ -265,7 +271,7 @@ test_pg_store_plans_internals.o: test_pg_store_plans_internals.c \
 /soft/projects/postgres/build/include/server/utils/portal.h:
 /soft/projects/postgres/build/include/server/utils/plancache.h:
 /soft/projects/postgres/build/include/server/utils/resowner.h:
-/soft/projects/postgres/build/include/server/utils/queryjumble.h:
+/soft/projects/postgres/build/include/server/nodes/queryjumble.h:
 /soft/projects/postgres/build/include/server/utils/builtins.h:
 /soft/projects/postgres/build/include/server/utils/fmgrprotos.h:
 /soft/projects/postgres/build/include/server/access/hash.h:

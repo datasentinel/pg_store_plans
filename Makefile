@@ -12,7 +12,7 @@ PG_VERSION := $(shell pg_config --version | sed "s/^PostgreSQL //" | sed "s/\.[0
 
 DATA = pg_store_plans--2.0.sql
 
-REGRESS = convert store queries_$(PG_VERSION)
+REGRESS = convert store queries_$(PG_VERSION) exclude_simple_inserts
 REGRESS_OPTS = --temp-config=regress.conf
 
 PG_CONFIG = pg_config
@@ -49,7 +49,7 @@ $(STARBALLS): $(TARSOURCES)
 rpm17: $(STARBALL17)
 	MAKE_ROOT=`pwd` rpmbuild -bb SPECS/pg_store_plans17.spec
 
-testfiles: convert.out convert.sql queries.sql
+testfiles: convert.out convert.sql
 
 convert.out: convert.sql
 	psql $(DBNAME) -a -q -X -f convert.sql > $@

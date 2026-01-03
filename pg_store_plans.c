@@ -277,6 +277,7 @@ static const struct config_enum_entry plan_storage_options[] =
 static int	store_size;			/* max # statements to track */
 static int	track_level = TRACK_LEVEL_TOP;	/* tracking level */
 static int	min_duration;		/* min duration to record */
+static bool exclude_simple_inserts; /* whether to exclude simple inserts */
 static bool dump_on_shutdown;	/* whether to save stats across shutdown */
 static bool log_analyze;		/* Similar to EXPLAIN (ANALYZE *) */
 static bool log_verbose;		/* Similar to EXPLAIN (VERBOSE *) */
@@ -489,6 +490,17 @@ _PG_init(void)
 							 &dump_on_shutdown,
 							 true,
 							 PGC_SIGHUP,
+							 0,
+							 NULL,
+							 NULL,
+							 NULL);
+
+	DefineCustomBoolVariable("pg_store_plans.exclude_simple_inserts",
+							 "Exclude simple inserts from plan tracking.",
+							 NULL,
+							 &exclude_simple_inserts,
+							 false,
+							 PGC_SUSET,
 							 0,
 							 NULL,
 							 NULL,
@@ -961,6 +973,33 @@ error:
 
 }
 
+static bool
+pgsp_exclude_simple_insert(PlannedStmt *plannedstmt)
+{
+
+	if (!exclude_simple_inserts)
+		return false;
+
+	if (plannedstmt == NULL)
+		return false;
+
+	/* Check if it's an INSERT command */
+	if (plannedstmt->commandType != CMD_INSERT)
+		return false;
+
+	/* Check if the plan tree is a simple node */
+	if (plannedstmt->planTree &&
+		plannedstmt->planTree->lefttree != NULL &&
+		(IsA(plannedstmt->planTree->lefttree, Result) ||
+		IsA(plannedstmt->planTree->lefttree, ValuesScan)) &&
+		plannedstmt->planTree->righttree == NULL)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 /*
  * Build the JSON plan string from the QueryDesc.
  */
@@ -1129,7 +1168,9 @@ pgsp_ExecutorFinish(QueryDesc *queryDesc)
 static void
 pgsp_ExecutorEnd(QueryDesc *queryDesc)
 {
-	if (!IsParallelWorker() && queryDesc->totaltime)
+	if (!pgsp_exclude_simple_insert(queryDesc->plannedstmt) &&
+		!IsParallelWorker() &&
+		queryDesc->totaltime)
 	{
 		/*
 		 * Make sure stats accumulation is done.  (Note: it's okay if several
@@ -1237,7 +1278,7 @@ pgsp_planner(Query *parse, const char *query_string, int cursorOptions,
 		result = standard_planner(parse, query_string, cursorOptions, boundParams);
 
 #if PG_VERSION_NUM >= 180000
-	if (pgsp_enabled(result->queryId))
+	if (!pgsp_exclude_simple_insert(result) && pgsp_enabled(result->queryId))
 		result->planId = pgsp_compute_plan_id(result);
 #endif
 

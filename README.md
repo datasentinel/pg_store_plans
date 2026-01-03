@@ -1,18 +1,22 @@
-It is a fork from [http://github.com/ossc-db/pg_store_plans](http://github.com/ossc-db/pg_store_plans) with changes:
+## Overview
 
-#### Enhancements
+It is a fork from [**http://github.com/ossc-db/pg_store_plans**](http://github.com/ossc-db/pg_store_plans) with changes.
+
+`pg_store_plans` provides a means to store execution plans of statements in PostgreSQL.  
+This fork includes specific modifications and fixes maintained by [**Datasentinel**](https://www.datasentinel.io).
+
+## Release 2.0 (2026-01-05) — Fork updates
+
+### Enhancements
 * Improve performance by changing the way plan IDs are computed (computed using the jumble method, similar to the queryid).
-* Add compatibility for PostgreSQL versions 14, 15, 16, 17, and 18.
-* Introduce `pg_store_plans.exclude_simple_inserts` parameter to filter out simple `INSERT` statements.
+* Add compatibility with PostgreSQL **14, 15, 16, 17, 18** (including the latest **18** release).
+* Introduce `pg_store_plans.exclude_simple_inserts` to filter out simple `INSERT` statements (e.g., value-list inserts) to reduce noise from high-frequency, low-value plans.
 
-#### Fixes
+### Fixes
 * Fix memory leak when reading plan text from file.
 * Add a null check when reading the plan from file.
 
-## Overview
 
-`pg_store_plans` provides a means to store execution plans of statements in PostgreSQL.  
-This fork includes specific modifications and fixes maintained by DATASENTINEL.
 
 ## Installation
 
@@ -28,11 +32,12 @@ make
 sudo make install
 ```
 
-> 
-> Add **pg_store_plans** to **shared_preload_libraries** parameter
->
-
 ## Parameters
+
+> <br>
+>
+> Add **pg_store_plans** to **shared_preload_libraries** parameter  (requires a server restart)  
+> <br>
 
 ### Configuration
 

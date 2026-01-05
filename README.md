@@ -9,7 +9,7 @@ This fork includes specific modifications and fixes maintained by [**Datasentine
 
 ### Enhancements
 * Improve performance by changing the way plan IDs are computed (computed using the jumble method, similar to the queryid).
-* Add compatibility with PostgreSQL **14, 15, 16, 17, 18** (including the latest **18** release).
+* Add compatibility with PostgreSQL **14, 15, 16, 17** and the latest **18** release.
 * Introduce `pg_store_plans.exclude_simple_inserts` to filter out simple `INSERT` statements (e.g., value-list inserts) to reduce noise from high-frequency, low-value plans.
 
 ### Fixes
@@ -67,3 +67,54 @@ sudo make install
 | `pg_store_plans.log_triggers` | boolean | false | This parameter has no effect unless pg_store_plans.log_analyze is turned `on`.<br>Causes trigger execution statistics to be included in recoreded plans. 
 | `pg_store_plans.verbose` | boolean | false | causes `EXPLAIN VERBOSE` output, rather than just `EXPLAIN` output, to be included in plan.
 
+
+## pg_store_plans view description
+
+The `pg_store_plans` view exposes aggregated execution plan statistics collected by the extension, in a format similar to `pg_stat_statements`, but with the plan text attached.
+
+Each row represents a distinct observed plan for a statement, identified by the `(userid, dbid, queryid, planid)` key.
+
+Timing and I/O counters are aggregated across all calls for the same key; `first_call` and `last_call` indicate when the plan was first and most recently observed.
+
+Example:
+```sql
+SELECT queryid, planid, calls, total_time, mean_time
+FROM pg_store_plans
+ORDER BY total_time DESC
+LIMIT 20;
+```
+
+### Columns
+
+|        Column         |           Type |           
+| :--- | :--- | 
+ userid                | oid                      
+ dbid                  | oid                      
+ queryid               | bigint                   
+ planid                | bigint                   
+ plan                  | text                     
+ calls                 | bigint                   
+ total_time            | double precision         
+ min_time              | double precision         
+ max_time              | double precision         
+ mean_time             | double precision         
+ stddev_time           | double precision         
+ rows                  | bigint                   
+ shared_blks_hit       | bigint                   
+ shared_blks_read      | bigint                   
+ shared_blks_dirtied   | bigint                   
+ shared_blks_written   | bigint                   
+ local_blks_hit        | bigint                   
+ local_blks_read       | bigint                   
+ local_blks_dirtied    | bigint                   
+ local_blks_written    | bigint                   
+ temp_blks_read        | bigint                   
+ temp_blks_written     | bigint                   
+ shared_blk_read_time  | double precision         
+ shared_blk_write_time | double precision         
+ local_blk_read_time   | double precision         
+ local_blk_write_time  | double precision         
+ temp_blk_read_time    | double precision         
+ temp_blk_write_time   | double precision         
+ first_call            | timestamp with time zone 
+ last_call             | timestamp with time zone 

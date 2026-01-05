@@ -983,21 +983,19 @@ pgsp_exclude_simple_insert(PlannedStmt *plannedstmt)
 	if (plannedstmt == NULL)
 		return false;
 
-	/* Check if it's an INSERT command */
 	if (plannedstmt->commandType != CMD_INSERT)
 		return false;
 
-	/* Check if the plan tree is a simple node */
+	/* Check if the plan tree is a simple insert */
 	if (plannedstmt->planTree &&
 		plannedstmt->planTree->lefttree != NULL &&
-		(IsA(plannedstmt->planTree->lefttree, Result) ||
-		IsA(plannedstmt->planTree->lefttree, ValuesScan)) &&
-		plannedstmt->planTree->righttree == NULL)
+		!IsA(plannedstmt->planTree->lefttree, Result) &&
+		!IsA(plannedstmt->planTree->lefttree, ValuesScan))
 	{
-		return true;
+		return false;
 	}
 
-	return false;
+	return true;
 }
 
 /*

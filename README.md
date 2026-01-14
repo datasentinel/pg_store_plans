@@ -5,7 +5,7 @@ It is a fork from [**http://github.com/ossc-db/pg_store_plans**](http://github.c
 `pg_store_plans` provides a means to store execution plans of statements in PostgreSQL.  
 This fork includes specific modifications and fixes maintained by [**Datasentinel**](https://www.datasentinel.io).
 
-## Release 2.0 (2026-01-05) — Fork updates
+## Release 2.0 (2026-01-19) — Fork updates
 
 ### Enhancements
 * Improve performance by changing the way plan IDs are computed (computed using the jumble method, similar to the queryid).
@@ -118,3 +118,23 @@ LIMIT 20;
  temp_blk_write_time   | double precision         
  first_call            | timestamp with time zone 
  last_call             | timestamp with time zone 
+
+
+## Datasentinel Integration
+
+[![Datasentinel](images/datasentinel-logo.jpg)](https://www.datasentinel.io)
+
+
+When combined with **Datasentinel**, execution plans are automatically collected and available in the UI, empowering users to:
+
+*   **Visualize** plans by query over time and correlate them with performance metrics.
+*   **Inspect** plans in multiple formats:
+    *   **Text**: Standard `EXPLAIN`-style output.
+    *   **Structured Tree View**: A custom hierarchical table for analysis.
+*   **Identify** plan changes and make informed optimization decisions.
+
+For detailed instructions on configuration, see [**How to configure and integrate pg_store_plans**](https://docs.datasentinel.io/manual/features/other-features/execution-plans).
+
+### Interactive Demo
+
+[![Datasentinel](images/execution-plan.png)](https://app.arcade.software/share/UKahLWSZwrYLpOYUvkDG)

@@ -958,6 +958,9 @@ pgsp_shmem_shutdown(int code, Datum arg)
 	/* Unlink query-texts file; it's not needed while shutdown */
 	unlink(PGSP_TEXT_FILE);
 
+	if (pbuffer)
+		free(pbuffer);
+
 	return;
 
 error:
@@ -1032,6 +1035,7 @@ pgsp_build_json_plan(QueryDesc *queryDesc)
 		es_str->data[0] = '{';
 		es_str->data[es_str->len - 1] = '}';
 	}
+
 	return es_str->data;
 }
 
@@ -1509,6 +1513,8 @@ done:
 	/* We postpone this pfree until we're out of the lock */
 	if (norm_query)
 		pfree(norm_query);
+	if (shorten_plan)
+		pfree(shorten_plan);
 }
 
 /*

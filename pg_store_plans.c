@@ -1280,7 +1280,7 @@ pgsp_planner(Query *parse, const char *query_string, int cursorOptions,
 		result = standard_planner(parse, query_string, cursorOptions, boundParams);
 
 #if PG_VERSION_NUM >= 180000
-	if (!pgsp_exclude_simple_insert(result) && pgsp_enabled(result->queryId))
+	if (result && !pgsp_exclude_simple_insert(result) && pgsp_enabled(result->queryId))
 		result->planId = pgsp_compute_plan_id(result);
 #endif
 

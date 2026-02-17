@@ -22,7 +22,7 @@ This fork includes specific modifications and fixes maintained by [**Datasentine
 
 ### Unpack the source code
 ```
-tar xvzf pg_store_plans.tar.gz
+tar xvzf pg_store_plans-2.0.tar.gz
 cd pg_store_plans
 ```
 
@@ -65,7 +65,7 @@ sudo make install
 | `pg_store_plans.log_buffers`  | boolean | off | causes `EXPLAIN (ANALYZE, BUFFERS)` output, rather than just `EXPLAIN` output, to be included in plan.
 | `pg_store_plans.log_timing` | boolean | true | Disables to record actual timings. The overhead of repeatedly reading the system clock can slow down the query significantly on some systems, so it may be useful to set this parameter to `false` when only actual row counts, and not exact execution times for each execution nodes, are needed. <br>Run time of the entire statement is always measured when pg_store_plans.log_analyze is `true`.
 | `pg_store_plans.log_triggers` | boolean | false | This parameter has no effect unless pg_store_plans.log_analyze is turned `on`.<br>Causes trigger execution statistics to be included in recoreded plans. 
-| `pg_store_plans.verbose` | boolean | false | causes `EXPLAIN VERBOSE` output, rather than just `EXPLAIN` output, to be included in plan.
+| `pg_store_plans.log_verbose` | boolean | false | causes `EXPLAIN VERBOSE` output, rather than just `EXPLAIN` output, to be included in plan.
 
 
 ## pg_store_plans view description

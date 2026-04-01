@@ -1,0 +1,44 @@
+SET pg_store_plans.exclude_simple_inserts=off;
+
+
+
+select pg_store_plans_reset();
+\o /dev/null
+
+-- Verify that simple INSERT plans are included
+insert into regions (region_id, region_name) values (1110, 'Test Region 1110');
+insert into regions (region_id, region_name) values (1120, 'Test Region 1120');
+insert into regions (region_id, region_name) values (1130, 'Test Region 1130'), 
+(1140, 'Test Region 1140'), (1150, 'Test Region 1150');
+
+-- This insert as select should be included
+insert into regions (region_id, region_name) select 10000 + ROW_NUMBER() OVER (), region_name || 'copy' from regions;
+
+-- Simple updates and deletes to verify they are included
+delete from regions where 1=2;
+update regions set region_name='test' where 1=2;
+select region_name from regions;
+
+\o
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select pg_store_plans_reset();
+\o /dev/null
+
+SET pg_store_plans.exclude_simple_inserts=on;
+
+-- Verify that simple INSERT plans are excluded
+insert into regions (region_id, region_name) values (11110, 'Test Region 1110');
+insert into regions (region_id, region_name) values (11200, 'Test Region 1120');
+insert into regions (region_id, region_name) values (11300, 'Test Region 1130'), 
+(11400, 'Test Region 1140'), (11500, 'Test Region 1150');
+
+-- This insert as select should be included
+insert into regions (region_id, region_name) select 100000 + ROW_NUMBER() OVER (), region_name || 'copy' from regions;
+
+-- Simple updates and deletes to verify they are included
+delete from regions where 1=2;
+update regions set region_name='test' where 1=2;
+select region_name from regions;
+
+\o
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;

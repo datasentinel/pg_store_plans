@@ -1,7 +1,7 @@
 # pg_stat_plan/Makefile
 
 MODULES = pg_store_plans
-STOREPLANSVER = 2.0
+STOREPLANSVER = 2.0.1
 
 MODULE_big = pg_store_plans
 OBJS = pg_store_plans.o pgsp_json.o pgsp_json_text.o pgsp_explain.o pgsp_jumble.o
@@ -10,9 +10,16 @@ EXTENSION = pg_store_plans
 
 PG_VERSION := $(shell pg_config --version | sed "s/^PostgreSQL //" | sed "s/\.[0-9]*$$//")
 
-DATA = pg_store_plans--2.0.sql
+DATA = pg_store_plans--2.0.1.sql pg_store_plans--2.0--2.0.1.sql
 
-REGRESS = convert store queries_$(PG_VERSION) exclude_simple_inserts
+ifeq ($(shell test $(PG_VERSION) -ge 18 && echo yes), yes)
+ESI_TEST = exclude_simple_inserts_18
+ANON_TEST = anonymize_18
+else
+ESI_TEST = exclude_simple_inserts
+ANON_TEST = anonymize
+endif
+REGRESS = convert store queries_$(PG_VERSION) $(ESI_TEST) $(ANON_TEST)
 REGRESS_OPTS = --temp-config=regress.conf
 
 PG_CONFIG = pg_config

@@ -13,7 +13,7 @@
 
 #include "pgsp_json_text.h"
 
-extern char *pgsp_json_normalize(char *json);
+extern char *pgsp_json_normalize(char *json, bool keep_costs);
 extern char *pgsp_json_shorten(char *json);
 extern char *pgsp_json_inflate(char *json);
 extern char *pgsp_json_yamlize(char *json);

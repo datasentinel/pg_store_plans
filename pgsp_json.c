@@ -783,10 +783,11 @@ json_ofstart(void *state, char *fname, bool isnull)
 	}
 
 	ctx->remove = (ctx->mode == PGSP_JSON_NORMALIZE &&
-				   (!p || !p->normalize_use));
-
-	if (ctx->remove)
-		JSONACTION_RETURN_SUCCESS();
+				   !ctx->keep_costs &&
+    	(!p || !p->normalize_use));
+       
+    if (ctx->remove)                                                                                                                                                                                                        
+      JSONACTION_RETURN_SUCCESS();  
 
 	if (!bms_is_member(ctx->level, ctx->first))
 	{
@@ -1306,14 +1307,15 @@ pgsp_json_shorten(char *json)
 }
 
 char *
-pgsp_json_normalize(char *json)
+pgsp_json_normalize(char *json, bool keep_costs)
 {
 	JsonLexContext lex;
 	JsonSemAction sem;
 	pgspParserContext    ctx;
 
 	init_json_lex_context(&lex, json);
-	init_parser_context(&ctx,PGSP_JSON_NORMALIZE, json, NULL, 0);
+	init_parser_context(&ctx, PGSP_JSON_NORMALIZE, json, NULL, 0);
+	ctx.keep_costs = keep_costs;
 	init_json_semaction(&sem, &ctx);
 
 	run_pg_parse_json(&lex, &sem);

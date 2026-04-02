@@ -70,6 +70,7 @@
 #include "pgsp_json.h"
 #include "pgsp_explain.h"
 #include "pgsp_jumble.h"
+#include "utils/array.h"
 
 PG_MODULE_MAGIC;
 
@@ -81,7 +82,7 @@ PG_MODULE_MAGIC;
 static const uint32 PGSP_PG_MAJOR_VERSION = PG_VERSION_NUM / 100;
 
 /* This constant defines the magic number in the stats file header */
-static const uint32 PGSP_FILE_HEADER = 0x20221214;
+static const uint32 PGSP_FILE_HEADER = 0x20221215;
 static int	max_plan_len = 5000;
 
 /* XXX: Should USAGE_EXEC reflect execution time and/or buffer usage? */
@@ -96,7 +97,7 @@ static int	max_plan_len = 5000;
 typedef uint64 queryid_t;
 #define PGSP_NO_QUERYID		UINT64CONST(0)
 #define PGSP_NO_PLANID		UINT64CONST(0)
-
+#define PGSP_MAX_RELIDS 48
 /*
  * Extension version number, for supporting older extension versions' objects
  */
@@ -107,7 +108,8 @@ typedef enum pgspVersion
 	PGSP_V1_7,
 	/* PGSP_V1_7 interface is used for v1.8 */
 	PGSP_V1_9,
-	/* PGSP_V2_0 interface is used for v2.0 */
+	/* PGSP_V1_9 interface is used for v2.0 */
+	PGSP_V2_0_1,          /* adds relids column */
 }			pgspVersion;
 
 /*
@@ -185,6 +187,9 @@ typedef struct pgspEntry
 	Size		plan_offset;	/* plan text offset in extern file */
 	int			plan_len;		/* # of valid bytes in query string */
 	int			encoding;		/* query encoding */
+	int         n_relids;       /* number of accessed relations */
+	Oid         relids[PGSP_MAX_RELIDS]; /* OIDs of accessed relations */
+	int			cmd_type;		/* CmdType of the query */
 	slock_t		mutex;			/* protects the counters only */
 }			pgspEntry;
 
@@ -284,6 +289,7 @@ static bool log_verbose;		/* Similar to EXPLAIN (VERBOSE *) */
 static bool log_buffers;		/* Similar to EXPLAIN (BUFFERS *) */
 static bool log_timing;			/* Similar to EXPLAIN (TIMING *) */
 static bool log_triggers;		/* whether to log trigger statistics  */
+static bool anonymize_plans;	/* whether to anonymize stored plans */
 static int	plan_format = PLAN_FORMAT_TEXT; /* Plan representation style in
 											 * pg_store_plans.plan  */
 static int	plan_storage = PLAN_STORAGE_FILE;	/* Plan storage type */
@@ -323,6 +329,7 @@ PG_FUNCTION_INFO_V1(pg_store_plans_1_6);
 PG_FUNCTION_INFO_V1(pg_store_plans_1_7);
 PG_FUNCTION_INFO_V1(pg_store_plans_1_9);
 PG_FUNCTION_INFO_V1(pg_store_plans_2_0);
+PG_FUNCTION_INFO_V1(pg_store_plans_2_0_1);
 PG_FUNCTION_INFO_V1(pg_store_plans_shorten);
 PG_FUNCTION_INFO_V1(pg_store_plans_normalize);
 PG_FUNCTION_INFO_V1(pg_store_plans_jsonplan);
@@ -342,6 +349,8 @@ static void pgsp_shmem_request(void);
 static void pgsp_shmem_startup(void);
 static void pgsp_shmem_shutdown(int code, Datum arg);
 static void pgsp_ExecutorStart(QueryDesc *queryDesc, int eflags);
+static void pgsp_extract_relids(List *rtable, Oid *relids, int *n_relids);
+static char *pgsp_build_plan_text(QueryDesc *queryDesc, bool with_analyze, int *plan_len_out);
 
 #if PG_VERSION_NUM >= 180000
 static void pgsp_ExecutorRun(QueryDesc *queryDesc,
@@ -381,6 +390,9 @@ static bool need_gc_ptexts(void);
 static void gc_ptexts(void);
 static void entry_dealloc(void);
 static void entry_reset(void);
+#if PG_VERSION_NUM >= 180000
+static void pgsp_create_entry_if_not_exists(QueryDesc *queryDesc);
+#endif
 
 
 /*
@@ -554,6 +566,17 @@ _PG_init(void)
 							 "Set VERBOSE for EXPLAIN on logging.",
 							 NULL,
 							 &log_verbose,
+							 false,
+							 PGC_SUSET,
+							 0,
+							 NULL,
+							 NULL,
+							 NULL);
+
+	DefineCustomBoolVariable("pg_store_plans.anonymize",
+							 "Anonymize stored plans by masking constants in expressions.",
+							 NULL,
+							 &anonymize_plans,
 							 false,
 							 PGC_SUSET,
 							 0,
@@ -820,6 +843,9 @@ pgsp_shmem_startup(void)
 
 		/* copy in the actual stats */
 		entry->counters = temp.counters;
+		entry->n_relids = Min(temp.n_relids, PGSP_MAX_RELIDS);
+		memcpy(entry->relids, temp.relids, entry->n_relids * sizeof(Oid));
+		entry->cmd_type = temp.cmd_type;
 	}
 
 	pfree(buffer);
@@ -1005,7 +1031,7 @@ pgsp_exclude_simple_insert(PlannedStmt *plannedstmt)
  * Build the JSON plan string from the QueryDesc.
  */
 static char *
-pgsp_build_json_plan(QueryDesc *queryDesc)
+pgsp_build_json_plan(QueryDesc *queryDesc, bool with_analyze)
 {
 	ExplainState *es;
 	StringInfo	es_str;
@@ -1013,7 +1039,7 @@ pgsp_build_json_plan(QueryDesc *queryDesc)
 	es = NewExplainState();
 	es_str = es->str;
 
-	es->analyze = queryDesc->instrument_options;
+	es->analyze = with_analyze ? queryDesc->instrument_options : 0;
 	es->verbose = log_verbose;
 	es->buffers = (es->analyze && log_buffers);
 	es->timing = (es->analyze && log_timing);
@@ -1038,6 +1064,119 @@ pgsp_build_json_plan(QueryDesc *queryDesc)
 
 	return es_str->data;
 }
+
+static char *
+pgsp_build_plan_text(QueryDesc *queryDesc, bool with_analyze, int *plan_len_out)
+{
+	char	   *json_plan;
+	char	   *shorten_plan;
+	int			plan_len;
+
+	json_plan = pgsp_build_json_plan(queryDesc, with_analyze);
+
+	if (anonymize_plans)
+		shorten_plan = pgsp_json_normalize(json_plan, true);
+	else
+		shorten_plan = pgsp_json_shorten(json_plan);
+
+	plan_len = strlen(shorten_plan);
+	pfree(json_plan);
+
+	if (plan_len >= shared_state->plan_size)
+		plan_len = pg_encoding_mbcliplen(GetDatabaseEncoding(),
+										 shorten_plan,
+										 plan_len,
+										 shared_state->plan_size - 1);
+
+	*plan_len_out = plan_len;
+	return shorten_plan;
+}
+
+#if PG_VERSION_NUM >= 180000
+static void
+pgsp_create_entry_if_not_exists(QueryDesc *queryDesc)
+{
+	pgspHashKey key;
+	pgspEntry  *entry;
+	char	   *shorten_plan;
+	int			plan_len;
+	Size		plan_offset = 0;
+	bool		do_gc = false;
+
+	if (!shared_state || !hash_table)
+		return;
+
+	if (IsParallelWorker())
+		return;
+
+	if (pgsp_exclude_simple_insert(queryDesc->plannedstmt))
+		return;
+
+	if (!pgsp_enabled(queryDesc->plannedstmt->queryId))
+		return;
+
+	if (queryDesc->plannedstmt->planId == PGSP_NO_PLANID)
+		return;
+
+	memset(&key, 0, sizeof(key));
+	key.userid = GetUserId();
+	key.dbid = MyDatabaseId;
+	key.queryid = queryDesc->plannedstmt->queryId;
+	key.planid = queryDesc->plannedstmt->planId;
+
+	LWLockAcquire(shared_state->lock, LW_SHARED);
+
+	entry = (pgspEntry *) hash_search(hash_table, &key, HASH_FIND, NULL);
+	if (entry)
+	{
+		LWLockRelease(shared_state->lock);
+		return;
+	}
+
+	shorten_plan = pgsp_build_plan_text(queryDesc, false, &plan_len);
+
+	if (plan_storage == PLAN_STORAGE_FILE)
+	{
+		int			gc_count;
+		bool		stored;
+
+		stored = ptext_store(shorten_plan, plan_len, &plan_offset, &gc_count);
+		do_gc = need_gc_ptexts();
+
+		LWLockRelease(shared_state->lock);
+		LWLockAcquire(shared_state->lock, LW_EXCLUSIVE);
+
+		if (!stored || shared_state->gc_count != gc_count)
+			stored = ptext_store(shorten_plan, plan_len, &plan_offset, NULL);
+
+		if (!stored)
+		{
+			LWLockRelease(shared_state->lock);
+			pfree(shorten_plan);
+			return;
+		}
+	}
+	else
+	{
+		LWLockRelease(shared_state->lock);
+		LWLockAcquire(shared_state->lock, LW_EXCLUSIVE);
+	}
+
+	entry = entry_alloc(&key, plan_offset, plan_len, true);
+
+	pgsp_extract_relids(queryDesc->plannedstmt->rtable, entry->relids, &entry->n_relids);
+	entry->cmd_type = queryDesc->plannedstmt->commandType;
+
+	if (plan_storage == PLAN_STORAGE_SHMEM)
+		memcpy(SHMEM_PLAN_PTR(entry), shorten_plan, plan_len + 1);
+
+	if (do_gc)
+		gc_ptexts();
+
+	LWLockRelease(shared_state->lock);
+	pfree(shorten_plan);
+}
+#endif
 
 static uint64
 pgsp_compute_plan_id(PlannedStmt *plan)
@@ -1100,11 +1239,17 @@ pgsp_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		MemoryContext oldcxt;
 
 		oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
-		queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL
-										  ,false
-			);
+		queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL, false);
 		MemoryContextSwitchTo(oldcxt);
 	}
+
+#if PG_VERSION_NUM >= 180000
+	if (!IsParallelWorker() &&
+		pgsp_enabled(queryDesc->plannedstmt->queryId) &&
+		!pgsp_exclude_simple_insert(queryDesc->plannedstmt) &&
+		(eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
+		pgsp_create_entry_if_not_exists(queryDesc);
+#endif
 }
 
 /*
@@ -1318,6 +1463,19 @@ hash_query(const char *query)
 	return queryid;
 }
 
+static void
+pgsp_extract_relids(List *rtable, Oid *relids, int *n_relids)
+{
+	ListCell *lc;
+
+	*n_relids = 0;
+	foreach(lc, rtable)
+	{
+		RangeTblEntry *rte = lfirst_node(RangeTblEntry, lc);
+		if (rte->rtekind == RTE_RELATION && *n_relids < PGSP_MAX_RELIDS)
+			relids[(*n_relids)++] = rte->relid;
+	}
+}
 
 /*
  * Store some statistics for a plan.
@@ -1338,8 +1496,6 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 	volatile	pgspEntry *e;
 	Size		plan_offset = 0;
 	bool		do_gc = false;
-	char	   *json_plan;
-
 
 	/* Safety check... */
 	if (!shared_state || !hash_table)
@@ -1359,23 +1515,9 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 
 	if (!entry)
 	{
-		json_plan = pgsp_build_json_plan(queryDesc);
+		Assert(queryId != PGSP_NO_QUERYID);
 
-		Assert(json_plan != NULL && queryId != PGSP_NO_QUERYID);
-
-		shorten_plan = pgsp_json_shorten(json_plan);
-		plan_len = strlen(shorten_plan);
-
-		/* elog(DEBUG3, "pg_store_plans: Shorten plan: %s", shorten_plan); */
-		/* elog(DEBUG3, "pg_store_plans: Original plan: %s", json_plan); */
-
-		pfree(json_plan);
-
-		if (plan_len >= shared_state->plan_size)
-			plan_len = pg_encoding_mbcliplen(GetDatabaseEncoding(),
-											 shorten_plan,
-											 plan_len,
-											 shared_state->plan_size - 1);
+		shorten_plan = pgsp_build_plan_text(queryDesc, true, &plan_len);
 
 		/* Store the plan text, if the entry not present */
 		if (plan_storage == PLAN_STORAGE_FILE)
@@ -1415,6 +1557,9 @@ pgsp_store(QueryDesc *queryDesc, queryid_t queryId, uint64 planId,
 		}
 
 		entry = entry_alloc(&key, plan_offset, plan_len, false);
+
+		pgsp_extract_relids(queryDesc->plannedstmt->rtable, entry->relids, &entry->n_relids);
+		entry->cmd_type = queryDesc->plannedstmt->commandType;
 
 		/* shorten_plan is terminated by NUL */
 		if (plan_storage == PLAN_STORAGE_SHMEM)
@@ -1536,11 +1681,20 @@ pg_store_plans_reset(PG_FUNCTION_ARGS)
 #define PG_STORE_PLANS_COLS_V1_6	26
 #define PG_STORE_PLANS_COLS_V1_7	28
 #define PG_STORE_PLANS_COLS_V1_9	30
-#define PG_STORE_PLANS_COLS			30	/* maximum of above */
+#define PG_STORE_PLANS_COLS_V2_0_1  32
+#define PG_STORE_PLANS_COLS         32  /* maximum of above */
 
 /*
  * Retrieve statement statistics.
  */
+Datum
+pg_store_plans_2_0_1(PG_FUNCTION_ARGS)
+{
+	pg_store_plans_internal(fcinfo, PGSP_V2_0_1);
+
+	return (Datum) 0;
+}
+
 Datum
 pg_store_plans_2_0(PG_FUNCTION_ARGS)
 {
@@ -1579,6 +1733,23 @@ pg_store_plans(PG_FUNCTION_ARGS)
 	pg_store_plans_internal(fcinfo, PGSP_V1_5);
 
 	return (Datum) 0;
+}
+
+static const char *
+cmd_type_to_string(int cmd_type)
+{
+	switch (cmd_type)
+	{
+		case CMD_SELECT:	return "SELECT";
+		case CMD_INSERT:	return "INSERT";
+		case CMD_UPDATE:	return "UPDATE";
+		case CMD_DELETE:	return "DELETE";
+#if PG_VERSION_NUM >= 150000
+		case CMD_MERGE:		return "MERGE";
+#endif
+		case CMD_UTILITY:	return "UTILITY";
+		default:			return "UNKNOWN";
+	}
 }
 
 static void
@@ -1787,10 +1958,6 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 			SpinLockRelease(&e->mutex);
 		}
 
-		/* Skip entry if unexecuted (ie, it's a pending "sticky" entry) */
-		if (tmp.calls == 0)
-			continue;
-
 		values[i++] = Int64GetDatumFast(tmp.calls);
 		values[i++] = Float8GetDatumFast(tmp.total_time);
 		values[i++] = Float8GetDatumFast(tmp.min_time);
@@ -1839,13 +2006,45 @@ pg_store_plans_internal(FunctionCallInfo fcinfo,
 			values[i++] = Float8GetDatumFast(tmp.temp_blk_write_time);
 		}
 
-		values[i++] = TimestampTzGetDatum(tmp.first_call);
-		values[i++] = TimestampTzGetDatum(tmp.last_call);
+		if (tmp.calls == 0)
+		{
+			nulls[i++] = true;	/* first_call */
+			nulls[i++] = true;	/* last_call */
+		}
+		else
+		{
+			values[i++] = TimestampTzGetDatum(tmp.first_call);
+			values[i++] = TimestampTzGetDatum(tmp.last_call);
+		}
+
+		if (api_version >= PGSP_V2_0_1)
+		{
+			int     n = entry->n_relids;
+
+			if (n > 0)
+			{
+				Datum  *elems;
+				int     j;
+
+				elems = palloc(n * sizeof(Datum));
+				for (j = 0; j < n; j++)
+					elems[j] = ObjectIdGetDatum(entry->relids[j]);
+				values[i++] = PointerGetDatum(
+					construct_array(elems, n, OIDOID,
+									sizeof(Oid), true, TYPALIGN_INT));
+				pfree(elems);
+			}
+			else
+				nulls[i++] = true;
+
+			values[i++] = CStringGetTextDatum(cmd_type_to_string(entry->cmd_type));
+		}
 
 		Assert(i == (api_version == PGSP_V1_5 ? PG_STORE_PLANS_COLS_V1_5 :
 					 api_version == PGSP_V1_6 ? PG_STORE_PLANS_COLS_V1_6 :
 					 api_version == PGSP_V1_7 ? PG_STORE_PLANS_COLS_V1_7 :
 					 api_version == PGSP_V1_9 ? PG_STORE_PLANS_COLS_V1_9 :
+					 api_version == PGSP_V2_0_1 ? PG_STORE_PLANS_COLS_V2_0_1 :
 					 -1 /* fail if you forget to update this assert */ ));
 
 		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
@@ -2574,7 +2773,7 @@ pg_store_plans_normalize(PG_FUNCTION_ARGS)
 {
 	text	   *short_plan = PG_GETARG_TEXT_P(0);
 	char	   *cjson = text_to_cstring(short_plan);
-	char	   *cnormalized = pgsp_json_normalize(cjson);
+	char	   *cnormalized = pgsp_json_normalize(cjson, false);
 
 	PG_RETURN_TEXT_P(cstring_to_text(cnormalized));
 }

@@ -213,7 +213,7 @@ EXECUTE my_regions('Region_1');
 EXECUTE my_regions('Region_2');
 DEALLOCATE my_regions;
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
      1 | Result
      2 | Seq Scan on regions                               +
        |   Filter: ((region_name)::text = 'Region_1'::text)
@@ -232,7 +232,7 @@ JOIN branches b ON e.branch_id = b.branch_id
 WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
      1 | Result
      3 | Hash Join                                                                                 +
        |   Hash Cond: (e.branch_id = b.branch_id)                                                  +
@@ -263,7 +263,7 @@ WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 \g
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
      1 | Hash Join                                                                         +
        |   Hash Cond: (e.branch_id = b.branch_id)                                          +
        |   ->  Seq Scan on employees e                                                     +
@@ -301,7 +301,7 @@ SET enable_seqscan = ON;
 SET enable_indexscan = OFF;
 select last_name from customers where last_name='custom123';
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
      1 | Bitmap Heap Scan on customers                                                                   +
        |   Filter: (((last_name)::text = 'customer128'::text) OR ((last_name)::text = 'custom123'::text))+
        |   ->  Bitmap Index Scan using customers_idx                                                     +
@@ -334,7 +334,7 @@ SELECT employee_name, branch_id, hire_date,
     rank() OVER (PARTITION BY employee_name)
 FROM employees;
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
      1 | Result
      1 | WindowAgg                                                                               +
        |   Window: w1 AS (PARTITION BY branch_id ORDER BY hire_date ROWS UNBOUNDED PRECEDING)    +
@@ -360,7 +360,7 @@ SELECT * FROM orders WHERE order_date = CURRENT_DATE -1;
 SELECT * FROM orders WHERE order_date = CURRENT_DATE -2;
 SELECT * FROM orders WHERE order_date = CURRENT_DATE -1 or order_date = current_date - 2;
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
      1 | Append                                                                                      +
        |   Subplans Removed: 19                                                                      +
        |   ->  Bitmap Heap Scan on orders_p2 orders_1                                                +
@@ -426,7 +426,7 @@ order by path;
 \g
 \g
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
      1 | Result
      3 | Result                                                                                 +
        |   CTE l                                                                                +

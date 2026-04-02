@@ -166,6 +166,8 @@ typedef struct
 								 * has been processed for each level */
 	Bitmapset  *not_item;		/* Bitmap set holds whether the node name at
 								   the level was literally "Item" or not. */
+	bool		keep_costs;		/* True if cost/stats fields are kept in
+								 * normalize mode */
 	bool		remove;			/* True if the current node is not shown in
 								 * the result */
 	bool		last_elem_is_object; /* True if the last processed element

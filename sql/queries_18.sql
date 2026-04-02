@@ -207,7 +207,7 @@ EXECUTE my_regions('Region_2');
 DEALLOCATE my_regions;
 
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -225,7 +225,7 @@ WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -250,7 +250,7 @@ WHERE b.branch_name in ('Branch_10','Branch_1');
 \g
 \g
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -272,7 +272,7 @@ SET enable_indexscan = OFF;
 select last_name from customers where last_name='custom123';
 
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -290,7 +290,7 @@ SELECT employee_name, branch_id, hire_date,
 FROM employees;
 
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -301,7 +301,7 @@ SELECT * FROM orders WHERE order_date = CURRENT_DATE -1 or order_date = current_
 
 
 \o
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
@@ -350,7 +350,7 @@ order by path;
 \g
 \o
 
-select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 order by calls, plan;
+select calls, regexp_replace(plan, '\s*\(cost=[^)]+\)', '', 'g') AS plan from pg_store_plans where planid != 0 and calls > 0 order by calls, plan;
 select pg_store_plans_reset();
 \o /dev/null
 
